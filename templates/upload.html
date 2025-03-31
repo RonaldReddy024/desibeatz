@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Video - DesiBeats</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            height: 100%;
+            display: flex;
+            background-color: #000;
+            color: white;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background-color: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+        }
+        .logo img {
+            height: 40px;
+            margin-bottom: 20px;
+        }
+        .search-container {
+            width: 80%;
+            margin-bottom: 20px;
+        }
+        .search-container form {
+            display: flex;
+            width: 100%;
+        }
+        .search-container input {
+            flex-grow: 1;
+            padding: 8px;
+            border-radius: 20px;
+            border: none;
+            background-color: #333;
+            color: white;
+        }
+        .search-container button {
+            margin-left: 5px;
+            background-color: #ff0050;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            padding: 8px;
+            cursor: pointer;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        nav a.active, nav a:hover {
+            background-color: #ff0050;
+        }
+        .login-button {
+            background-color: #ff0050;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            width: 80%;
+            border-radius: 20px;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .footer {
+            margin-top: auto;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        #content {
+            margin-left: 200px;
+            padding: 20px;
+            flex-grow: 1;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+        form {
+            background-color: #111;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        form label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        form input[type="text"], form textarea, form input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background-color: #333;
+            color: white;
+            margin-bottom: 15px;
+        }
+        form textarea {
+            resize: none;
+            height: 80px;
+        }
+        .upload-button {
+            width: 100%;
+            background-color: #ff0050;
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-button:hover {
+            background-color: #e60045;
+        }
+        /* Blank Screen Overlay */
+        .blank-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            visibility: hidden;
+        }
+        .blank-screen.active {
+            visibility: visible;
+        }
+        .blank-screen h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .blank-screen p {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .blank-screen button {
+            background-color: #ff0050;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .blank-screen button:hover {
+            background-color: #e60045;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="../static/images/desibeatz_logo.png" alt="DesiBeats">
+        </div>
+        <div class="search-container">
+            <form action="search.html" method="get">
+                <input type="text" name="query" placeholder="Search" required>
+                <button type="submit"><i class="fas fa-search"></i></button>
+            </form>
+        </div>
+        <nav>
+            <a href="index.html"><i class="fas fa-home"></i> For You</a>
+            <a href="explore.html"><i class="fas fa-compass"></i> Explore</a>
+            <a href="following.html"><i class="fas fa-users"></i> Following</a>
+            <a href="upload.html" class="active"><i class="fas fa-plus-square"></i> Upload</a>
+            <a href="live.html"><i class="fas fa-video"></i> LIVE</a>
+            <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+        </nav>
+        <button class="login-button" onclick="location.href='login.html'">Log in</button>
+        <div class="footer">
+            <p>Company</p>
+            <p>Program</p>
+            <p>Terms & Policies</p>
+        </div>
+    </div>
+    <div id="content">
+        <h1>Upload a Video</h1>
+        <form action="upload_success.html" method="post" enctype="multipart/form-data">
+            <label for="title">Video Title</label>
+            <input type="text" id="title" name="title" placeholder="Enter video title" required>
+            <label for="description">Video Description</label>
+            <textarea id="description" name="description" placeholder="Enter video description"></textarea>
+            <label for="videoFile">Choose Video File</label>
+            <input type="file" id="videoFile" name="video" accept="video/*" required>
+            <span class="filename">No file chosen</span>
+            <button type="submit" class="upload-button">Upload</button>
+        </form>
+    </div>
+    <div class="blank-screen" id="blankScreen">
+        <h1>Please log in first</h1>
+        <p>You need to be logged in to upload videos.</p>
+        <button onclick="redirectToLogin()">Go to Login</button>
+    </div>
+
+    <script>
+        // Check login status on page load
+        window.onload = function () {
+            const username = localStorage.getItem('username');
+            const blankScreen = document.getElementById('blankScreen');
+            if (!username) {
+                blankScreen.classList.add('active');
+            }
+        };
+
+        function redirectToLogin() {
+            window.location.href = 'login.html';
+        }
+
+        document.getElementById('videoFile').onchange = function (event) {
+            var fileName = event.target.files[0]?.name || "No file chosen";
+            document.querySelector('.filename').textContent = 'File chosen: ' + fileName;
+        };
+    </script>
+</body>
+</html>

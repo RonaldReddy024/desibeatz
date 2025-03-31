@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ video.title }} | DesiBeats</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #000;
+            color: white;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background-color: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+        }
+        .logo img {
+            height: 40px;
+            margin-bottom: 20px;
+        }
+        .search-container {
+            width: 80%;
+            margin-bottom: 20px;
+        }
+        .search-container form {
+            display: flex;
+            width: 100%;
+        }
+        .search-container input {
+            flex-grow: 1;
+            padding: 8px;
+            border-radius: 20px;
+            border: none;
+            background-color: #333;
+            color: white;
+        }
+        .search-container button {
+            margin-left: 5px;
+            background-color: #ff0050;
+            border: none;
+            border-radius: 50%;
+            color: white;
+            padding: 8px;
+            cursor: pointer;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        nav a.active, nav a:hover {
+            background-color: #ff0050;
+        }
+        .login-button {
+            background-color: #ff0050;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            width: 80%;
+            border-radius: 20px;
+            margin: 20px 0;
+            cursor: pointer;
+        }
+        .footer {
+            margin-top: auto;
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        #content {
+            margin-left: 200px;
+            padding: 20px;
+            flex-grow: 1;
+            background-color: #000;
+            overflow-y: auto;
+        }
+        video {
+            display: block;
+            margin: 20px 0;
+            width: 100%;
+            max-width: 720px;
+            border: 1px solid #444;
+            border-radius: 10px;
+        }
+        .comments {
+            margin-top: 20px;
+        }
+        .comments h2 {
+            margin-bottom: 10px;
+        }
+        .comments ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        .comments ul li {
+            background-color: #111;
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
+        }
+        .comments ul li strong {
+            color: #ff0050;
+        }
+        .comments form textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background-color: #333;
+            color: white;
+            margin-bottom: 10px;
+            resize: none;
+        }
+        .comments form button {
+            background-color: #ff0050;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="{{ url_for('static', filename='images/desibeatz_logo.png') }}" alt="DesiBeats">
+        </div>
+        <div class="search-container">
+            <form action="{{ url_for('search') }}" method="get">
+                <input type="text" name="query" placeholder="Search" required>
+                <button type="submit"><i class="fas fa-search"></i></button>
+            </form>
+        </div>
+        <nav>
+            <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> For You</a>
+            <a href="{{ url_for('explore') }}"><i class="fas fa-compass"></i> Explore</a>
+            <a href="{{ url_for('following') }}"><i class="fas fa-users"></i> Following</a>
+            <a href="{{ url_for('upload') }}"><i class="fas fa-plus-square"></i> Upload</a>
+            <a href="{{ url_for('live') }}"><i class="fas fa-video"></i> LIVE</a>
+            <a href="{{ url_for('profile') }}"><i class="fas fa-user"></i> Profile</a>
+        </nav>
+        <button class="login-button">Log in</button>
+        <div class="footer">
+            <p>Company</p>
+            <p>Program</p>
+            <p>Terms & Policies</p>
+        </div>
+    </div>
+    <div id="content">
+        <h1>{{ video.title }}</h1>
+        <video controls>
+            <source src="{{ url_for('static', filename='uploads/' + video.filename) }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <div class="comments">
+            <h2>Comments</h2>
+            <ul>
+                {% for comment in video.comments %}
+                <li><strong>User {{ comment.user_id }}</strong>: {{ comment.content }}</li>
+                {% endfor %}
+            </ul>
+            {% if current_user.is_authenticated %}
+            <form action="{{ url_for('add_comment', video_id=video.id) }}" method="post">
+                <textarea name="content" rows="3" placeholder="Add a comment..." required></textarea>
+                <button type="submit">Post</button>
+            </form>
+            {% else %}
+            <p><a href="{{ url_for('login') }}">Log in</a> to comment.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

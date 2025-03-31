@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login and Signup</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #000; /* Main background color */
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .logo {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            cursor: pointer;
+        }
+
+        .logo img {
+            width: 120px;
+            height: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .logo img:hover {
+            transform: scale(1.1);
+        }
+
+        .container {
+            display: none;
+            max-width: 400px;
+            width: 100%;
+            padding: 20px;
+            background-color: #111; /* Sidebar-like background */
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"], input[type="password"], input[type="email"] {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 16px;
+            border: none;
+            border-radius: 25px;
+            background-color: #333;
+            color: white;
+            font-size: 14px;
+        }
+
+        input::placeholder {
+            color: #aaa;
+        }
+
+        button {
+            background-color: #ff0050;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #e60045;
+        }
+
+        p {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        a {
+            color: #ff0050;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .toggle-links {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <!-- Clickable Logo -->
+    <div class="logo">
+        <a href="index.html" title="Go to Home">
+            <img src="desibeatz_logo.png" alt="DesiBeats Logo">
+        </a>
+    </div>
+
+    <div class="container" id="loginContainer">
+        <h1>Login</h1>
+        <form onsubmit="loginUser(event)">
+            <input type="email" id="loginEmail" name="username" placeholder="Email" required>
+            <input type="password" id="loginPassword" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+            <div class="toggle-links">
+                <p>Don't have an account? <a onclick="showSignup()">Sign up here</a></p>
+            </div>
+        </form>
+    </div>
+
+    <div class="container" id="signupContainer">
+        <h1>Sign Up</h1>
+        <form onsubmit="signupUser(event)">
+            <input type="text" id="signupName" name="name" placeholder="Full Name" required>
+            <input type="email" id="signupEmail" name="username" placeholder="Email" required>
+            <input type="password" id="signupPassword" name="password" placeholder="Create Password" required>
+            <button type="submit">Sign Up</button>
+            <div class="toggle-links">
+                <p>Already have an account? <a onclick="showLogin()">Login here</a></p>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Show the signup form
+        function showSignup() {
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('signupContainer').style.display = 'block';
+        }
+
+        // Show the login form
+        function showLogin() {
+            document.getElementById('signupContainer').style.display = 'none';
+            document.getElementById('loginContainer').style.display = 'block';
+        }
+
+        // Initially show the login container
+        document.getElementById('loginContainer').style.display = 'block';
+
+        // Simulate user login
+        function loginUser(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            // Save the user's email to localStorage
+            localStorage.setItem('username', email);
+            // Redirect to index1.html
+            window.location.href = 'index1.html';
+        }
+
+        // Simulate user signup
+        function signupUser(event) {
+            event.preventDefault();
+            const name = document.getElementById('signupName').value;
+            const email = document.getElementById('signupEmail').value;
+            // Save the user's name and email to localStorage
+            localStorage.setItem('username', name);
+            // Redirect to index1.html
+            window.location.href = 'index1.html';
+        }
+    </script>
+</body>
+</html>

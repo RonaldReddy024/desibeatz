@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Video | DesiBeats</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            height: 100%;
+            display: flex;
+            background-color: #000;
+            color: white;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background-color: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+        }
+        .logo img {
+            display: block;
+            width: 160px; /* Adjust size of the logo */
+            height: auto;
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        nav a.active, nav a:hover {
+            background-color: #ff0050;
+        }
+        #content {
+            margin-left: 200px;
+            padding: 20px;
+            flex-grow: 1;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-y: auto;
+        }
+        form {
+            background-color: #111;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        form label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        form input[type="text"], form textarea, form input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 10px;
+            border: none;
+            background-color: #333;
+            color: white;
+            margin-bottom: 15px;
+        }
+        form textarea {
+            resize: none;
+            height: 80px;
+        }
+        .upload-button {
+            width: 100%;
+            background-color: #ff0050;
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-button:hover {
+            background-color: #e60045;
+        }
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+        .user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #ff0050;
+            cursor: pointer;
+        }
+        .user-info .username {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .dropdown {
+            position: absolute;
+            top: 60px;
+            right: 0;
+            background-color: #111;
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            display: none;
+        }
+        .dropdown a {
+            color: white;
+            text-decoration: none;
+            display: block;
+            margin: 5px 0;
+            padding: 5px;
+            transition: background-color 0.3s;
+        }
+        .dropdown a:hover {
+            background-color: #ff0050;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <!-- Updated logo -->
+            <img src="../static/images/desibeatz_logo.png" alt="DesiBeats Logo">
+        </div>
+        <nav>
+            <a href="index1.html"><i class="fas fa-home"></i> Home</a>
+            <a href="explore1.html"><i class="fas fa-compass"></i> Explore</a>
+            <a href="upload1.html" class="active"><i class="fas fa-plus-square"></i> Upload</a>
+            <a href="profile1.html"><i class="fas fa-user"></i> Profile</a>
+        </nav>
+    </div>
+    <div id="content">
+        <div class="user-info">
+            <img src="default-profile.png" alt="User Profile" id="profileIcon" />
+            <span class="username" id="username">User</span>
+            <div class="dropdown" id="dropdownMenu">
+                <a href="settings.html">Settings</a>
+                <a href="help.html">Help</a>
+                <a href="login.html" onclick="logout()">Sign Out</a>
+            </div>
+        </div>
+        <h1>Upload a Video</h1>
+        <form id="uploadForm">
+            <label for="title">Video Title</label>
+            <input type="text" id="title" name="title" placeholder="Enter video title" required>
+            <label for="description">Video Description</label>
+            <textarea id="description" name="description" placeholder="Enter video description"></textarea>
+            <label for="videoFile">Choose Video File</label>
+            <input type="file" id="videoFile" name="video" accept="video/*" required>
+            <button type="submit" class="upload-button">Upload</button>
+        </form>
+    </div>
+
+    <script>
+        // Load user data from localStorage
+        window.onload = function() {
+            const username = localStorage.getItem('username');
+            const profilePic = localStorage.getItem('profilePic') || 'default-profile.png';
+
+            if (!username) {
+                alert('Please log in first.');
+                window.location.href = 'login.html';
+            } else {
+                document.getElementById('username').innerText = username;
+                document.getElementById('profileIcon').src = profilePic;
+            }
+        };
+
+        // Dropdown menu toggle
+        const profileIcon = document.getElementById('profileIcon');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+
+        profileIcon.addEventListener('click', () => {
+            dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('username');
+            localStorage.removeItem('profilePic');
+            alert('You have been logged out.');
+            window.location.href = 'login.html';
+        }
+
+        // Handle video upload
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const fileInput = document.getElementById('videoFile');
+            const fileName = fileInput.files[0]?.name || '';
+
+            if (title && description && fileName) {
+                const newVideo = { title, description, fileName };
+                const videos = JSON.parse(localStorage.getItem('videos')) || [];
+                videos.push(newVideo);
+                localStorage.setItem('videos', JSON.stringify(videos));
+                alert('Video uploaded successfully!');
+                window.location.href = 'profile1.html';
+            } else {
+                alert('Please fill all fields and select a file.');
+            }
+        });
+    </script>
+</body>
+</html>

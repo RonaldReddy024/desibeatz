@@ -1,0 +1,14 @@
+index.html
+explore.htmlu
+upload.html
+profile.html
+video.html
+
+
+
+HTML Templates Needed
+login.html: Form to log in users.
+signup.html: Form to register users.
+upload.html: Form to upload videos.
+profile.html: Displays videos uploaded by the logged-in user.
+404.html and 500.html: Error pages for better UX.

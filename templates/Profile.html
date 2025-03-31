@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User's Profile | DesiBeats</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #000;
+            color: white;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 100%;
+            background-color: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+        }
+        .logo img {
+            display: block;
+            width: 160px; /* Updated logo size */
+            height: auto; /* Maintain aspect ratio */
+            margin-bottom: 20px;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+        nav a.active, nav a:hover {
+            background-color: #ff0050;
+        }
+        #content {
+            margin-left: 200px;
+            padding: 20px;
+            flex-grow: 1;
+            background-color: #000;
+            overflow-y: auto;
+        }
+        .video-item {
+            margin: 15px 0;
+            background-color: #111;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
+            position: relative;
+            display: inline-block;
+        }
+        .video-item video {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <img src="../static/images/desibeatz_logo.png" alt="DesiBeats Logo">
+        </div>
+        <nav>
+            <a href="index.html"><i class="fas fa-home"></i> For You</a>
+            <a href="explore.html"><i class="fas fa-compass"></i> Explore</a>
+            <a href="following.html"><i class="fas fa-users"></i> Following</a>
+            <a href="upload.html"><i class="fas fa-plus-square"></i> Upload</a>
+            <a href="live.html"><i class="fas fa-video"></i> LIVE</a>
+            <a href="profile.html" class="active"><i class="fas fa-user"></i> Profile</a>
+            <a href="more.html"><i class="fas fa-ellipsis-h"></i> More</a>
+        </nav>
+    </div>
+    <div id="content">
+        <h1>User's Profile</h1>
+        <h2>Your Uploaded Videos</h2>
+        <div id="videosSection">
+            <!-- Videos or Login Alert will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const username = localStorage.getItem('username');
+            const videosSection = document.getElementById('videosSection');
+
+            if (!username) {
+                alert('Please log in first.');
+                window.location.href = 'login.html'; // Redirect to login page
+            } else {
+                videosSection.innerHTML = `
+                    <div class="video-item">
+                        <video controls>
+                            <source src="../static/uploads/video1.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <p>Video Title 1</p>
+                    </div>
+                    <div class="video-item">
+                        <video controls>
+                            <source src="../static/uploads/video2.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <p>Video Title 2</p>
+                    </div>
+                `;
+            }
+        };
+    </script>
+</body>
+</html>
