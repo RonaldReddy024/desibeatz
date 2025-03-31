@@ -12,6 +12,16 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+from flask import Flask, redirect, request
+
+app = Flask(__name__)
+
+@app.before_request
+def redirect_to_https():
+    if request.headers.get('X-Forwarded-Proto', 'http') == 'http':
+        url = request.url.replace('http://', 'https://', 1)
+        return redirect(url, code=301)
+
 # User model
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -103,6 +113,39 @@ def page_not_found(e):
 @app.errorhandler(500)
 def server_error(e):
     return render_template('500.html'), 500
+
+# --- your existing routes like /login, /signup, etc. ---
+
+@app.route('/explore')
+def explore():
+    if current_user.is_authenticated:
+        return render_template('explore1.html')
+    return render_template('explore.html')
+
+@app.route('/profile')
+def profile():
+    if current_user.is_authenticated:
+        return render_template('profile1.html')
+    return render_template('profile.html')
+
+@app.route('/upload')
+def upload():
+    if current_user.is_authenticated:
+        return render_template('upload1.html')
+    return render_template('upload.html')
+
+@app.route('/video')
+def video():
+    if current_user.is_authenticated:
+        return render_template('video1.html')
+    return render_template('video.html')
+
+@app.route('/search')
+def search():
+    if current_user.is_authenticated:
+        return render_template('search1.html')
+    return render_template('search.html')
+
 
 if __name__ == '__main__':
     with app.app_context():
