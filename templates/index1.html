@@ -6,7 +6,6 @@
   <title>DesiBeats Home (Logged In)</title>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
   <style>
-    /* Base styles */
     body, html {
       margin: 0;
       padding: 0;
@@ -102,7 +101,7 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      background-color: rgba(255,255,255,0.9); /* slight white overlay for readability */
+      background-color: rgba(255,255,255,0.9);
       color: #000;
       padding: 20px;
     }
@@ -117,17 +116,14 @@
       <input type="search" placeholder="Search">
     </div>
     <nav>
-      <!-- All links use absolute paths to the logged-in versions -->
       <a href="/index1.html" class="active"><i class="fas fa-home"></i> For You</a>
       <a href="/explore1.html"><i class="fas fa-compass"></i> Explore</a>
-      <!-- If you don't have a separate "following1.html", you can point to /following.html if that's appropriate -->
       <a href="/following.html"><i class="fas fa-users"></i> Following</a>
       <a href="/upload1.html"><i class="fas fa-plus-square"></i> Upload</a>
       <a href="/live.html"><i class="fas fa-broadcast-tower"></i> LIVE</a>
       <a href="/profile1.html"><i class="fas fa-user"></i> Profile</a>
       <a href="/more.html"><i class="fas fa-ellipsis-h"></i> More</a>
     </nav>
-    <!-- Logout button -->
     <button class="logout-button" onclick="location.href='/logout'">Log out</button>
     <div class="footer">
       <p>Company</p>
@@ -136,7 +132,7 @@
     </div>
   </div>
   <div id="content">
-    <h1>Welcome to DesiBeats (Logged In)</h1>
+    <h1>Welcome to DesiBeats, {{ current_user.username }}</h1>
     <p>Your personalized video platform.</p>
   </div>
 </body>
