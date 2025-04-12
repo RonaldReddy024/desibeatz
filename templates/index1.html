@@ -1,211 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home | DesiBeats</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
-            height: 100%;
-            display: flex;
-            background-color: #000;
-            color: white;
-        }
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 200px;
-            height: 100%;
-            background-color: #111;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px 0;
-            box-shadow: 2px 0 5px rgba(0,0,0,0.5);
-        }
-        .logo img {
-            display: block;
-            width: 160px;
-            height: auto;
-            margin-bottom: 20px;
-        }
-        nav a {
-            color: white;
-            text-decoration: none;
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-            width: 100%;
-            padding: 10px 20px;
-            border-radius: 10px;
-        }
-        nav a.active, nav a:hover {
-            background-color: #ff0050;
-        }
-        #content {
-            margin-left: 200px;
-            padding: 20px;
-            flex-grow: 1;
-            background-color: #000;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-        }
-        .user-info {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 10;
-        }
-        .user-info img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid #ff0050;
-            cursor: pointer;
-        }
-        .user-info .username {
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .dropdown {
-            position: absolute;
-            top: 60px;
-            right: 0;
-            background-color: #111;
-            color: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            display: none;
-        }
-        .dropdown a {
-            color: white;
-            text-decoration: none;
-            display: block;
-            margin: 5px 0;
-            padding: 5px;
-        }
-        .dropdown a:hover {
-            background-color: #ff0050;
-        }
-        .video-carousel {
-            display: flex;
-            overflow-x: auto;
-            gap: 15px;
-            margin: 20px 0;
-            padding: 10px 0;
-            scroll-behavior: smooth;
-        }
-        .video-card {
-            min-width: 300px;
-            background-color: #111;
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
-        }
-        .video-card video {
-            width: 100%;
-            border-radius: 8px;
-        }
-        .video-card h3 {
-            margin: 10px 0 5px;
-        }
-        .video-card p {
-            font-size: 14px;
-            color: #ccc;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DesiBeats Home (Logged In)</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* Base styles */
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+      height: 100%;
+      display: flex;
+      background: url("{{ url_for('static', filename='background.gif') }}") no-repeat center center fixed;
+      background-size: cover;
+    }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 200px;
+      height: 100%;
+      background-color: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .logo img {
+      display: block;
+      width: 160px;
+      height: auto;
+    }
+    .search-container {
+      width: 100%;
+      padding: 0 10px;
+      margin-bottom: 20px;
+    }
+    .search-container input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 20px;
+      border: none;
+      background-color: #333;
+      color: white;
+    }
+    nav {
+      width: 100%;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-align: left;
+      transition: background-color 0.2s ease;
+    }
+    nav a i {
+      margin-right: 10px;
+    }
+    nav a.active, nav a:hover {
+      background-color: #ff0050;
+    }
+    .logout-button {
+      background-color: #ff0050;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      width: 80%;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .footer p {
+      color: grey;
+      font-size: 10px;
+      text-align: center;
+      margin: 5px 0;
+    }
+    #content {
+      margin-left: 200px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: rgba(255,255,255,0.9); /* slight white overlay for readability */
+      color: #000;
+      padding: 20px;
+    }
+  </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            <img src="../static/images/desibeatz_logo.png" alt="DesiBeats Logo">
-        </div>
-        <nav>
-            <a href="index1.html" class="active"><i class="fas fa-home"></i> Home</a>
-            <a href="explore1.html"><i class="fas fa-compass"></i> Explore</a>
-            <a href="upload1.html"><i class="fas fa-plus-square"></i> Upload</a>
-            <a href="profile1.html"><i class="fas fa-user"></i> Profile</a>
-        </nav>
+  <div class="sidebar">
+    <div class="logo">
+      <img src="../static/images/desibeatz_logo.png" alt="DesiBeats Logo">
     </div>
-    <div id="content">
-        <div class="user-info">
-            <img src="default-profile.png" alt="User Profile" id="profileIcon" />
-            <span class="username" id="username">User</span>
-            <div class="dropdown" id="dropdownMenu">
-                <a href="settings.html">Settings</a>
-                <a href="help.html">Help</a>
-                <a href="login.html" onclick="logout()">Sign Out</a>
-            </div>
-        </div>
-        <h1>Welcome to DesiBeats</h1>
-        <p>Your personalized video platform.</p>
-        <h2>Latest Videos</h2>
-        <div class="video-carousel" id="videoCarousel"></div>
+    <div class="search-container">
+      <input type="search" placeholder="Search">
     </div>
-
-    <script>
-        // Load user data
-        window.onload = function() {
-            const username = localStorage.getItem('username');
-            const profilePic = localStorage.getItem('profilePic') || 'default-profile.png';
-
-            if (username) {
-                document.getElementById('username').innerText = username;
-                document.getElementById('profileIcon').src = profilePic;
-            }
-            loadVideos();
-        };
-
-        // Dropdown menu toggle
-        const profileIcon = document.getElementById('profileIcon');
-        const dropdownMenu = document.getElementById('dropdownMenu');
-        profileIcon.addEventListener('click', () => {
-            dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
-        });
-
-        // Logout function
-        function logout() {
-            localStorage.removeItem('username');
-            localStorage.removeItem('profilePic');
-            alert('You have been logged out.');
-            window.location.href = 'login.html';
-        }
-
-        // Load videos from localStorage
-        function loadVideos() {
-            const videoCarousel = document.getElementById('videoCarousel');
-            const videos = JSON.parse(localStorage.getItem('videos')) || [];
-
-            if (videos.length === 0) {
-                videoCarousel.innerHTML = '<p>No videos uploaded yet.</p>';
-                return;
-            }
-
-            videos.forEach(video => {
-                const videoCard = document.createElement('div');
-                videoCard.classList.add('video-card');
-                videoCard.innerHTML = `
-                    <video controls>
-                        <source src="../static/uploads/${video.fileName}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                    <h3>${video.title}</h3>
-                    <p>${video.description}</p>
-                `;
-                videoCarousel.appendChild(videoCard);
-            });
-        }
-    </script>
+    <nav>
+      <!-- All links use absolute paths to the logged-in versions -->
+      <a href="/index1.html" class="active"><i class="fas fa-home"></i> For You</a>
+      <a href="/explore1.html"><i class="fas fa-compass"></i> Explore</a>
+      <!-- If you don't have a separate "following1.html", you can point to /following.html if that's appropriate -->
+      <a href="/following.html"><i class="fas fa-users"></i> Following</a>
+      <a href="/upload1.html"><i class="fas fa-plus-square"></i> Upload</a>
+      <a href="/live.html"><i class="fas fa-broadcast-tower"></i> LIVE</a>
+      <a href="/profile1.html"><i class="fas fa-user"></i> Profile</a>
+      <a href="/more.html"><i class="fas fa-ellipsis-h"></i> More</a>
+    </nav>
+    <!-- Logout button -->
+    <button class="logout-button" onclick="location.href='/logout'">Log out</button>
+    <div class="footer">
+      <p>Company</p>
+      <p>Program</p>
+      <p>Terms & Policies</p>
+    </div>
+  </div>
+  <div id="content">
+    <h1>Welcome to DesiBeats (Logged In)</h1>
+    <p>Your personalized video platform.</p>
+  </div>
 </body>
 </html>
