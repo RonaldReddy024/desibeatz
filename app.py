@@ -12,7 +12,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Optional: Force HTTPS in production
+# Optional: Force HTTPS in production (if desired)
 @app.before_request
 def redirect_to_https():
     if not app.debug and request.headers.get('X-Forwarded-Proto', 'http') == 'http':
@@ -25,10 +25,10 @@ def home():
         return redirect(url_for('index1_html'))
     return redirect(url_for('index_html'))
 
-# Updated User model with username (for display), email, and password hash.
+# User model: stores a display username, email, and hashed password.
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), nullable=False)  # Display name
+    username = db.Column(db.String(20), nullable=False)  # Display name for greeting
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     
@@ -47,53 +47,54 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Non‑authenticated homepage route
+# Public homepage route
 @app.route('/index.html')
 def index_html():
     return render_template('index.html')
 
-# Authenticated homepage route (protected)
+# Logged-in homepage route (displays the current user's username via template using current_user.username)
 @app.route('/index1.html')
 @login_required
 def index1_html():
     return render_template('index1.html')
 
-# Explore route: if logged in, show explore1.html; otherwise, show explore.html
+# Explore page: if logged in, show explore1.html; otherwise, explore.html
 @app.route('/explore.html')
 def explore_html():
     if current_user.is_authenticated:
         return render_template('explore1.html')
     return render_template('explore.html')
 
-# Profile route (protected)
+# Profile page (requires login)
 @app.route('/profile.html')
 @login_required
 def profile_html():
     return render_template('profile1.html')
 
-# Upload route (protected)
+# Upload page (requires login)
 @app.route('/upload.html')
 @login_required
 def upload_html():
     return render_template('upload1.html')
 
-# Live route: if logged in, show video1.html; otherwise, video.html
+# Live page: if logged in, show video1.html; otherwise, video.html
 @app.route('/live.html')
 def live_html():
     if current_user.is_authenticated:
         return render_template('video1.html')
     return render_template('video.html')
 
-# Login route – users log in using their email and password.
+# Login route: checks the form for email and password; if credentials are valid, log the user in and redirect.
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Retrieve the email and password from the form.
+        # Retrieve form fields
         email = request.form.get('email')
         password = request.form.get('password')
         if not email or not password:
             flash("All fields are required.", "danger")
             return redirect(url_for('login'))
+        
         user = User.query.filter_by(email=email).first()
         if user and user.verify_password(password):
             login_user(user)
@@ -104,7 +105,8 @@ def login():
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route – expects a username, email, and password.
+# Signup route: accepts a display username, email, and password.
+# On successful signup, the user is automatically logged in and redirected to index1.html.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -114,13 +116,14 @@ def signup():
         if not display_name or not email or not password:
             flash("All fields are required.", "danger")
             return redirect(url_for('signup'))
-        # Check if user already exists by email.
+        
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash("Email already exists.", "warning")
             return redirect(url_for('signup'))
+        
         new_user = User(username=display_name, email=email)
-        new_user.password = password
+        new_user.password = password  # This sets new_user.password_hash
         try:
             db.session.add(new_user)
             db.session.commit()
@@ -130,11 +133,12 @@ def signup():
             flash("Internal server error. Please try again later.", "danger")
             return redirect(url_for('signup'))
         
-        flash("Account created! You can now log in.", "success")
-        return redirect(url_for('login'))
+        flash("Account created! Welcome, " + display_name + ".", "success")
+        login_user(new_user)
+        return redirect(url_for('index1_html'))
     return render_template('signup.html')
 
-# Logout route
+# Logout route: logs out the user and redirects to the public homepage.
 @app.route('/logout')
 @login_required
 def logout():
@@ -144,5 +148,5 @@ def logout():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Create database tables if they don't exist.
+        db.create_all()  # Ensure that database tables exist.
     app.run(debug=True)
