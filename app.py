@@ -26,7 +26,7 @@ def home():
         return redirect(url_for('index1_html'))
     return redirect(url_for('index_html'))
 
-# User model – note: for now, login uses the "username" field.
+# User model – using "username" as the login credential
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -84,15 +84,16 @@ def live_html():
         return render_template('video1.html')
     return render_template('video.html')
 
-# Login route – expects POSTed form fields "username" and "password"
+# Login route – expects form fields "username" and "password"
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        # Get the username and password from the POSTed form
         username = request.form.get('username')
         password = request.form.get('password')
         if not username or not password:
             flash('All fields are required.', 'danger')
-            return redirect(url_for('index_html'))
+            return redirect(url_for('login'))
         user = User.query.filter_by(username=username).first()
         if user and user.verify_password(password):
             login_user(user)
@@ -100,10 +101,10 @@ def login():
             return redirect(url_for('index1_html'))
         else:
             flash('Invalid username or password.', 'danger')
-            return redirect(url_for('index_html'))
+            return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route – now expects a username and password
+# Signup route – expects a username and password
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -121,7 +122,7 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         flash('Account created! You can now log in.', 'success')
-        return redirect(url_for('index_html'))
+        return redirect(url_for('login'))
     return render_template('signup.html')
 
 # Logout route
@@ -134,5 +135,5 @@ def logout():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Create database tables if they don't exist
+        db.create_all()  # Ensure database tables are created
     app.run(debug=True)
