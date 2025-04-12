@@ -50,6 +50,7 @@ def load_user(user_id):
 # Non‑authenticated homepage route
 @app.route('/index.html')
 def index_html():
+    # For non‑authenticated users, show the index page that now includes the login form.
     return render_template('index.html')
 
 # Authenticated homepage route (protected)
@@ -84,25 +85,23 @@ def live_html():
         return render_template('video1.html')
     return render_template('video.html')
 
-# Login route
-@app.route('/login', methods=['GET', 'POST'])
+# Login route – expects form submissions from the login form embedded in index.html
+@app.route('/login', methods=['POST'])
 def login():
-    if request.method == 'POST':
-        # Expecting form fields "username" and "password"
-        username = request.form['username']
-        password = request.form['password']
-        if not username or not password:
-            flash('All fields are required.', 'danger')
-            return redirect(url_for('login'))
-        user = User.query.filter_by(username=username).first()
-        if user and user.verify_password(password):
-            login_user(user)
-            flash('Login successful!', 'success')
-            return redirect(url_for('index1_html'))
-        else:
-            flash('Invalid username or password.', 'danger')
-            return redirect(url_for('login'))
-    return render_template('login.html')
+    # This route is now called by our embedded login form on index.html
+    username = request.form.get('username')
+    password = request.form.get('password')
+    if not username or not password:
+        flash('All fields are required.', 'danger')
+        return redirect(url_for('index_html'))
+    user = User.query.filter_by(username=username).first()
+    if user and user.verify_password(password):
+        login_user(user)
+        flash('Login successful!', 'success')
+        return redirect(url_for('index1_html'))
+    else:
+        flash('Invalid username or password.', 'danger')
+        return redirect(url_for('index_html'))
 
 # Signup route
 @app.route('/signup', methods=['GET', 'POST'])
@@ -110,7 +109,7 @@ def signup():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        # You can add additional validation here as needed
+        # Add any further validation as needed
         if not username or not password:
             flash('All fields are required.', 'danger')
             return redirect(url_for('signup'))
@@ -123,7 +122,7 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         flash('Account created! You can now log in.', 'success')
-        return redirect(url_for('login'))
+        return redirect(url_for('index_html'))
     return render_template('signup.html')
 
 # Logout route
