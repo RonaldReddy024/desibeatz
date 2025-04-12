@@ -1,36 +1,86 @@
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        # Get credentials from the form.
-        username = request.form.get('username')
-        password = request.form.get('password')
-        
-        # Debug logs to check form input.
-        app.logger.debug("Login attempt with username: %s", username)
-        
-        # Check for missing fields.
-        if not username or not password:
-            flash('All fields are required.', 'danger')
-            app.logger.debug("Missing username or password")
-            return redirect(url_for('login'))
-        
-        # Retrieve the user record.
-        user = User.query.filter_by(username=username).first()
-        if user:
-            app.logger.debug("User found: %s", username)
-        else:
-            app.logger.debug("No user found with username: %s", username)
-        
-        # Verify the provided password.
-        if user and user.verify_password(password):
-            login_user(user)
-            flash('Login successful!', 'success')
-            app.logger.debug("Password verified. Logging in user: %s", username)
-            return redirect(url_for('index1_html'))
-        else:
-            flash('Invalid username or password.', 'danger')
-            app.logger.debug("Invalid credentials for username: %s", username)
-            return redirect(url_for('login'))
-    
-    # For GET requests, render the login page.
-    return render_template('login.html')
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | DesiBeats</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      max-width: 400px;
+      width: 100%;
+      padding: 20px;
+      background-color: #111;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    input[type="email"], input[type="password"] {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 16px;
+      border: none;
+      border-radius: 25px;
+      background-color: #333;
+      color: white;
+      font-size: 14px;
+    }
+    input::placeholder {
+      color: #aaa;
+    }
+    button {
+      background-color: #ff0050;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 25px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #e60045;
+    }
+    p {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    a {
+      color: #ff0050;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Login</h1>
+    <form method="POST" action="/login">
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+    </form>
+    <p>Don't have an account? <a href="/signup">Sign up here</a></p>
+  </div>
+</body>
+</html>
