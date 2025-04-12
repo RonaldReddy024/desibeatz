@@ -25,7 +25,7 @@ def home():
         return redirect(url_for('index1_html'))
     return redirect(url_for('index_html'))
 
-# Updated User model with username, email, and password hash
+# Updated User model with username (for display), email, and password hash.
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), nullable=False)  # Display name
@@ -47,41 +47,48 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Non‑authenticated homepage route
 @app.route('/index.html')
 def index_html():
     return render_template('index.html')
 
+# Authenticated homepage route (protected)
 @app.route('/index1.html')
 @login_required
 def index1_html():
     return render_template('index1.html')
 
+# Explore route: if logged in, show explore1.html; otherwise, show explore.html
 @app.route('/explore.html')
 def explore_html():
     if current_user.is_authenticated:
         return render_template('explore1.html')
     return render_template('explore.html')
 
+# Profile route (protected)
 @app.route('/profile.html')
 @login_required
 def profile_html():
     return render_template('profile1.html')
 
+# Upload route (protected)
 @app.route('/upload.html')
 @login_required
 def upload_html():
     return render_template('upload1.html')
 
+# Live route: if logged in, show video1.html; otherwise, video.html
 @app.route('/live.html')
 def live_html():
     if current_user.is_authenticated:
         return render_template('video1.html')
     return render_template('video.html')
 
-# Login route – users log in using their email and password
+# Login route – users log in using their email and password.
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        # Retrieve the email and password from the form.
         email = request.form.get('email')
         password = request.form.get('password')
         if not email or not password:
@@ -97,7 +104,7 @@ def login():
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route – expects username, email, and password
+# Signup route – expects a username, email, and password.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -107,18 +114,27 @@ def signup():
         if not display_name or not email or not password:
             flash("All fields are required.", "danger")
             return redirect(url_for('signup'))
+        # Check if user already exists by email.
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash("Email already exists.", "warning")
             return redirect(url_for('signup'))
         new_user = User(username=display_name, email=email)
         new_user.password = password
-        db.session.add(new_user)
-        db.session.commit()
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            app.logger.error("Error creating user: %s", e)
+            flash("Internal server error. Please try again later.", "danger")
+            return redirect(url_for('signup'))
+        
         flash("Account created! You can now log in.", "success")
         return redirect(url_for('login'))
     return render_template('signup.html')
 
+# Logout route
 @app.route('/logout')
 @login_required
 def logout():
@@ -128,5 +144,5 @@ def logout():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Ensure database tables are created
+        db.create_all()  # Create database tables if they don't exist.
     app.run(debug=True)
