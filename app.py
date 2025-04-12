@@ -40,12 +40,7 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# New Root Route: Redirects "/" to "/index.html"
-@app.route("/")
-def root():
-    return redirect(url_for('index_html'))
-
-# Explicit routes with .html endpoints
+# Explicit routes with .html URLs
 @app.route('/index.html')
 def index_html():
     if current_user.is_authenticated:
@@ -123,5 +118,5 @@ def logout():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Ensures that the database and tables are created
+        db.create_all()  # Ensure database and tables are created
     app.run(debug=True)
