@@ -40,7 +40,12 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Routes with explicit .html endpoints
+# New Root Route: Redirects "/" to "/index.html"
+@app.route("/")
+def root():
+    return redirect(url_for('index_html'))
+
+# Explicit routes with .html endpoints
 @app.route('/index.html')
 def index_html():
     if current_user.is_authenticated:
