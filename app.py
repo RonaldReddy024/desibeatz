@@ -84,7 +84,7 @@ def live_html():
         return render_template('video1.html')
     return render_template('video.html')
 
-# Login route using proper form submission
+# Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -101,14 +101,16 @@ def login():
             return redirect(url_for('index1_html'))
         else:
             flash('Invalid username or password.', 'danger')
+            return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route using proper form submission
+# Signup route
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        # You can add additional validation here as needed
         if not username or not password:
             flash('All fields are required.', 'danger')
             return redirect(url_for('signup'))
@@ -120,7 +122,7 @@ def signup():
         new_user.password = password
         db.session.add(new_user)
         db.session.commit()
-        flash('Account created! Please log in.', 'success')
+        flash('Account created! You can now log in.', 'success')
         return redirect(url_for('login'))
     return render_template('signup.html')
 
