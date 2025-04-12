@@ -26,7 +26,7 @@ def home():
         return redirect(url_for('index1_html'))
     return redirect(url_for('index_html'))
 
-# User model
+# User model – note: for now, login uses the "username" field.
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
@@ -50,7 +50,6 @@ def load_user(user_id):
 # Non‑authenticated homepage route
 @app.route('/index.html')
 def index_html():
-    # For non‑authenticated users, show the index page that now includes the login form.
     return render_template('index.html')
 
 # Authenticated homepage route (protected)
@@ -85,31 +84,31 @@ def live_html():
         return render_template('video1.html')
     return render_template('video.html')
 
-# Login route – expects form submissions from the login form embedded in index.html
-@app.route('/login', methods=['POST'])
+# Login route – expects POSTed form fields "username" and "password"
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    # This route is now called by our embedded login form on index.html
-    username = request.form.get('username')
-    password = request.form.get('password')
-    if not username or not password:
-        flash('All fields are required.', 'danger')
-        return redirect(url_for('index_html'))
-    user = User.query.filter_by(username=username).first()
-    if user and user.verify_password(password):
-        login_user(user)
-        flash('Login successful!', 'success')
-        return redirect(url_for('index1_html'))
-    else:
-        flash('Invalid username or password.', 'danger')
-        return redirect(url_for('index_html'))
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if not username or not password:
+            flash('All fields are required.', 'danger')
+            return redirect(url_for('index_html'))
+        user = User.query.filter_by(username=username).first()
+        if user and user.verify_password(password):
+            login_user(user)
+            flash('Login successful!', 'success')
+            return redirect(url_for('index1_html'))
+        else:
+            flash('Invalid username or password.', 'danger')
+            return redirect(url_for('index_html'))
+    return render_template('login.html')
 
-# Signup route
+# Signup route – now expects a username and password
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        # Add any further validation as needed
+        username = request.form.get('username')
+        password = request.form.get('password')
         if not username or not password:
             flash('All fields are required.', 'danger')
             return redirect(url_for('signup'))
