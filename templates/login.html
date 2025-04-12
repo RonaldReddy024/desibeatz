@@ -1,181 +1,302 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login and Signup</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #000; /* Main background color */
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DesiBeats Home</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    /* Base styling for index page */
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Arial', sans-serif;
+      height: 100%;
+      display: flex;
+      background: url("{{ url_for('static', filename='background.gif') }}") no-repeat center center fixed;
+      background-size: cover;
+    }
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 200px;
+      height: 100%;
+      background-color: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 0;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.5);
+      z-index: 1;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .logo img {
+      display: block;
+      width: 160px;
+      height: auto;
+    }
+    .search-container {
+      width: 100%;
+      padding: 0 10px;
+      margin-bottom: 20px;
+    }
+    .search-container input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 20px;
+      border: none;
+      background-color: #333;
+      color: white;
+    }
+    nav {
+      width: 100%;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      width: 100%;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-align: left;
+    }
+    nav a i {
+      margin-right: 10px;
+    }
+    nav a.active, nav a:hover {
+      background-color: #ff0050;
+    }
+    .login-button {
+      background-color: #ff0050;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      width: 80%;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      cursor: pointer;
+    }
+    .footer p {
+      color: grey;
+      font-size: 10px;
+      text-align: center;
+      margin: 5px 0;
+    }
+    #content {
+      margin-left: 200px;
+      flex-grow: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #fff;
+      color: #000;
+      padding: 20px;
+      position: relative;
+      z-index: 0;
+    }
 
-        .logo {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            cursor: pointer;
-        }
-
-        .logo img {
-            width: 120px;
-            height: auto;
-            transition: transform 0.3s ease;
-        }
-
-        .logo img:hover {
-            transform: scale(1.1);
-        }
-
-        .container {
-            display: none;
-            max-width: 400px;
-            width: 100%;
-            padding: 20px;
-            background-color: #111; /* Sidebar-like background */
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-
-        input[type="text"], input[type="password"], input[type="email"] {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 16px;
-            border: none;
-            border-radius: 25px;
-            background-color: #333;
-            color: white;
-            font-size: 14px;
-        }
-
-        input::placeholder {
-            color: #aaa;
-        }
-
-        button {
-            background-color: #ff0050;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 25px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 10px;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #e60045;
-        }
-
-        p {
-            margin-top: 10px;
-            font-size: 14px;
-        }
-
-        a {
-            color: #ff0050;
-            text-decoration: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-
-        .toggle-links {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #ccc;
-        }
-    </style>
+    /* Login/Signup Modal Styling */
+    #loginModal {
+      display: none; /* Hidden by default */
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 2;
+    }
+    #loginModal .modal-content {
+      background-color: #111;
+      border-radius: 15px;
+      max-width: 400px;
+      width: 90%;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      text-align: center;
+      position: relative;
+    }
+    #loginModal h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: white;
+    }
+    #loginModal input[type="text"],
+    #loginModal input[type="password"],
+    #loginModal input[type="email"] {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 16px;
+      border: none;
+      border-radius: 25px;
+      background-color: #333;
+      color: white;
+      font-size: 14px;
+    }
+    #loginModal input::placeholder {
+      color: #aaa;
+    }
+    #loginModal button {
+      background-color: #ff0050;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      border-radius: 25px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+      transition: background-color 0.3s;
+    }
+    #loginModal button:hover {
+      background-color: #e60045;
+    }
+    #loginModal p {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #ccc;
+    }
+    #loginModal a {
+      color: #ff0050;
+      text-decoration: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #loginModal a:hover {
+      text-decoration: underline;
+    }
+    .toggle-links {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    /* Close button for modal */
+    #closeModal {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      font-size: 24px;
+      color: #fff;
+      cursor: pointer;
+    }
+  </style>
 </head>
 <body>
-    <!-- Clickable Logo -->
+  <!-- Sidebar & Main Content -->
+  <div class="sidebar">
     <div class="logo">
-        <a href="index.html" title="Go to Home">
-            <img src="desibeatz_logo.png" alt="DesiBeats Logo">
-        </a>
+      <a href="index.html" title="Go to Home">
+        <img src="../static/images/desibeatz_logo.png" alt="DesiBeats Logo">
+      </a>
     </div>
+    <div class="search-container">
+      <input type="search" placeholder="Search">
+    </div>
+    <nav>
+      <a href="index.html" class="active"><i class="fas fa-home"></i> For You</a>
+      <a href="explore.html"><i class="fas fa-compass"></i> Explore</a>
+      <a href="following.html"><i class="fas fa-users"></i> Following</a>
+      <a href="upload.html"><i class="fas fa-plus-square"></i> Upload</a>
+      <a href="live.html"><i class="fas fa-broadcast-tower"></i> LIVE</a>
+      <a href="profile.html"><i class="fas fa-user"></i> Profile</a>
+      <a href="more.html"><i class="fas fa-ellipsis-h"></i> More</a>
+    </nav>
+    <!-- Instead of navigating to a separate page, open the login modal -->
+    <button class="login-button" onclick="showLoginModal()">Log in</button>
+    <div class="footer">
+      <p>Company</p>
+      <p>Program</p>
+      <p>Terms & Policies</p>
+    </div>
+  </div>
+  <div id="content">
+    <h1>Welcome to DesiBeats</h1>
+    <p>Your personalized video platform.</p>
+  </div>
 
-    <div class="container" id="loginContainer">
+  <!-- Login/Signup Modal Overlay -->
+  <div id="loginModal">
+    <div class="modal-content">
+      <span id="closeModal" onclick="hideLoginModal()">&times;</span>
+      <!-- Login Form Container -->
+      <div class="container" id="loginContainer">
         <h1>Login</h1>
         <form onsubmit="loginUser(event)">
-            <input type="email" id="loginEmail" name="username" placeholder="Email" required>
-            <input type="password" id="loginPassword" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-            <div class="toggle-links">
-                <p>Don't have an account? <a onclick="showSignup()">Sign up here</a></p>
-            </div>
+          <input type="email" id="loginEmail" name="username" placeholder="Email" required>
+          <input type="password" id="loginPassword" name="password" placeholder="Password" required>
+          <button type="submit">Login</button>
+          <div class="toggle-links">
+            <p>Don't have an account? <a onclick="showSignup()">Sign up here</a></p>
+          </div>
         </form>
-    </div>
-
-    <div class="container" id="signupContainer">
+      </div>
+      <!-- Signup Form Container -->
+      <div class="container" id="signupContainer" style="display: none;">
         <h1>Sign Up</h1>
         <form onsubmit="signupUser(event)">
-            <input type="text" id="signupName" name="name" placeholder="Full Name" required>
-            <input type="email" id="signupEmail" name="username" placeholder="Email" required>
-            <input type="password" id="signupPassword" name="password" placeholder="Create Password" required>
-            <button type="submit">Sign Up</button>
-            <div class="toggle-links">
-                <p>Already have an account? <a onclick="showLogin()">Login here</a></p>
-            </div>
+          <input type="text" id="signupName" name="name" placeholder="Full Name" required>
+          <input type="email" id="signupEmail" name="username" placeholder="Email" required>
+          <input type="password" id="signupPassword" name="password" placeholder="Create Password" required>
+          <button type="submit">Sign Up</button>
+          <div class="toggle-links">
+            <p>Already have an account? <a onclick="showLogin()">Login here</a></p>
+          </div>
         </form>
+      </div>
     </div>
+  </div>
 
-    <script>
-        // Show the signup form
-        function showSignup() {
-            document.getElementById('loginContainer').style.display = 'none';
-            document.getElementById('signupContainer').style.display = 'block';
-        }
+  <script>
+    // Functions to show/hide the login modal
+    function showLoginModal() {
+      document.getElementById('loginModal').style.display = 'flex';
+    }
+    function hideLoginModal() {
+      document.getElementById('loginModal').style.display = 'none';
+    }
 
-        // Show the login form
-        function showLogin() {
-            document.getElementById('signupContainer').style.display = 'none';
-            document.getElementById('loginContainer').style.display = 'block';
-        }
+    // Toggle between login and signup forms
+    function showSignup() {
+      document.getElementById('loginContainer').style.display = 'none';
+      document.getElementById('signupContainer').style.display = 'block';
+    }
+    function showLogin() {
+      document.getElementById('signupContainer').style.display = 'none';
+      document.getElementById('loginContainer').style.display = 'block';
+    }
 
-        // Initially show the login container
-        document.getElementById('loginContainer').style.display = 'block';
+    // Simulate user login (you should replace this with a proper backend call)
+    function loginUser(event) {
+      event.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      // Save the user's email to localStorage (for simulation purposes)
+      localStorage.setItem('username', email);
+      // Redirect to the logged-in homepage (index1.html)
+      window.location.href = 'index1.html';
+    }
 
-        // Simulate user login
-        function loginUser(event) {
-            event.preventDefault();
-            const email = document.getElementById('loginEmail').value;
-            // Save the user's email to localStorage
-            localStorage.setItem('username', email);
-            // Redirect to index1.html
-            window.location.href = 'index1.html';
-        }
-
-        // Simulate user signup
-        function signupUser(event) {
-            event.preventDefault();
-            const name = document.getElementById('signupName').value;
-            const email = document.getElementById('signupEmail').value;
-            // Save the user's name and email to localStorage
-            localStorage.setItem('username', name);
-            // Redirect to index1.html
-            window.location.href = 'index1.html';
-        }
-    </script>
+    // Simulate user signup (replace with a proper backend call)
+    function signupUser(event) {
+      event.preventDefault();
+      const name = document.getElementById('signupName').value;
+      // Save the user's name to localStorage (for simulation purposes)
+      localStorage.setItem('username', name);
+      // Redirect to the logged-in homepage (index1.html)
+      window.location.href = 'index1.html';
+    }
+  </script>
 </body>
 </html>
