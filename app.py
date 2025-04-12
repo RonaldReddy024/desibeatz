@@ -19,7 +19,7 @@ def redirect_to_https():
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
-# New default route for the root URL that redirects to /index.html
+# Default route that redirects to /index.html
 @app.route('/')
 def home():
     return redirect(url_for('index_html'))
@@ -46,32 +46,41 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Explicit routes with .html URLs
+
 @app.route('/index.html')
 def index_html():
     if current_user.is_authenticated:
+        app.logger.debug("Rendering index1.html for authenticated user.")
         return render_template('index1.html')
+    app.logger.debug("Rendering index.html for non-authenticated user.")
     return render_template('index.html')
 
 @app.route('/explore.html')
 def explore_html():
     if current_user.is_authenticated:
+        app.logger.debug("Rendering explore1.html for authenticated user.")
         return render_template('explore1.html')
+    app.logger.debug("Rendering explore.html for non-authenticated user.")
     return render_template('explore.html')
 
 @app.route('/profile.html')
 @login_required
 def profile_html():
+    app.logger.debug("Rendering profile1.html for authenticated user.")
     return render_template('profile1.html')
 
 @app.route('/upload.html')
 @login_required
 def upload_html():
+    app.logger.debug("Rendering upload1.html for authenticated user.")
     return render_template('upload1.html')
 
 @app.route('/live.html')
 def live_html():
     if current_user.is_authenticated:
+        app.logger.debug("Rendering video1.html for authenticated user.")
         return render_template('video1.html')
+    app.logger.debug("Rendering video.html for non-authenticated user.")
     return render_template('video.html')
 
 # Login route
@@ -87,9 +96,11 @@ def login():
         if user and user.verify_password(password):
             login_user(user)
             flash('Login successful!', 'success')
+            app.logger.debug("Login successful for user: %s", username)
             return redirect(url_for('index_html'))
         else:
             flash('Invalid username or password.', 'danger')
+            app.logger.debug("Login failed for user: %s", username)
     return render_template('login.html')
 
 # Signup route
@@ -110,6 +121,7 @@ def signup():
         db.session.add(new_user)
         db.session.commit()
         flash('Account created! Please log in.', 'success')
+        app.logger.debug("New user created: %s", username)
         return redirect(url_for('login'))
     return render_template('signup.html')
 
@@ -119,9 +131,10 @@ def signup():
 def logout():
     logout_user()
     flash('You have been logged out.', 'info')
+    app.logger.debug("User logged out.")
     return redirect(url_for('index_html'))
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Ensure database and tables are created
+        db.create_all()  # Ensure the database and tables are created
     app.run(debug=True)
