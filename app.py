@@ -19,27 +19,27 @@ def redirect_to_https():
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
 
-# Default route for the root URL
 @app.route('/')
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('index1_html'))
     return redirect(url_for('index_html'))
 
-# User model – using "username" as the login credential
+# Updated User model with username, email, and password hash
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), unique=True, nullable=False)
+    username = db.Column(db.String(20), nullable=False)  # Display name
+    email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     
     @property
     def password(self):
-        raise AttributeError('password is not a readable attribute')
+        raise AttributeError("password is not a readable attribute")
     
     @password.setter
     def password(self, password):
         self.password_hash = generate_password_hash(password)
-    
+        
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -47,90 +47,83 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Non‑authenticated homepage route
 @app.route('/index.html')
 def index_html():
     return render_template('index.html')
 
-# Authenticated homepage route (protected)
 @app.route('/index1.html')
 @login_required
 def index1_html():
     return render_template('index1.html')
 
-# Explore route: if logged in, show explore1.html; otherwise, show explore.html
 @app.route('/explore.html')
 def explore_html():
     if current_user.is_authenticated:
         return render_template('explore1.html')
     return render_template('explore.html')
 
-# Profile route (protected)
 @app.route('/profile.html')
 @login_required
 def profile_html():
     return render_template('profile1.html')
 
-# Upload route (protected)
 @app.route('/upload.html')
 @login_required
 def upload_html():
     return render_template('upload1.html')
 
-# Live route: if logged in, show video1.html; otherwise, video.html
 @app.route('/live.html')
 def live_html():
     if current_user.is_authenticated:
         return render_template('video1.html')
     return render_template('video.html')
 
-# Login route – expects form fields "username" and "password"
+# Login route – users log in using their email and password
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Get the username and password from the POSTed form
-        username = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
-        if not username or not password:
-            flash('All fields are required.', 'danger')
+        if not email or not password:
+            flash("All fields are required.", "danger")
             return redirect(url_for('login'))
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(email=email).first()
         if user and user.verify_password(password):
             login_user(user)
-            flash('Login successful!', 'success')
+            flash("Login successful!", "success")
             return redirect(url_for('index1_html'))
         else:
-            flash('Invalid username or password.', 'danger')
+            flash("Invalid email or password.", "danger")
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route – expects a username and password
+# Signup route – expects username, email, and password
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        username = request.form.get('username')
+        display_name = request.form.get('username')
+        email = request.form.get('email')
         password = request.form.get('password')
-        if not username or not password:
-            flash('All fields are required.', 'danger')
+        if not display_name or not email or not password:
+            flash("All fields are required.", "danger")
             return redirect(url_for('signup'))
-        existing_user = User.query.filter_by(username=username).first()
+        existing_user = User.query.filter_by(email=email).first()
         if existing_user:
-            flash('Username already exists.', 'warning')
+            flash("Email already exists.", "warning")
             return redirect(url_for('signup'))
-        new_user = User(username=username)
+        new_user = User(username=display_name, email=email)
         new_user.password = password
         db.session.add(new_user)
         db.session.commit()
-        flash('Account created! You can now log in.', 'success')
+        flash("Account created! You can now log in.", "success")
         return redirect(url_for('login'))
     return render_template('signup.html')
 
-# Logout route
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out.', 'info')
+    flash("You have been logged out.", "info")
     return redirect(url_for('index_html'))
 
 if __name__ == '__main__':
