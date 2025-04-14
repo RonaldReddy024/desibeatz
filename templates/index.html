@@ -72,7 +72,6 @@
       margin-left: 200px;
       flex-grow: 1;
       padding: 20px;
-      /* Use a light overlay for content to enhance readability */
       background-color: rgba(255,255,255,0.9);
       color: #000;
       overflow-y: auto;
@@ -81,8 +80,8 @@
       align-items: center;
       justify-content: center;
     }
-    /* Embedded login form styles */
-    .login-form {
+    /* Form container styles */
+    .form-section {
       background-color: #111;
       padding: 20px;
       border-radius: 10px;
@@ -92,11 +91,11 @@
       margin-top: 20px;
       text-align: center;
     }
-    .login-form h2 {
+    .form-section h2 {
       margin-bottom: 15px;
       color: #fff;
     }
-    .login-form input {
+    .form-section input {
       width: 100%;
       padding: 10px;
       margin: 8px 0;
@@ -106,7 +105,7 @@
       color: white;
       font-size: 14px;
     }
-    .login-form button {
+    .form-section button {
       background-color: #ff0050;
       color: white;
       border: none;
@@ -117,20 +116,20 @@
       margin-top: 10px;
       font-size: 16px;
     }
-    .login-form button:hover {
+    .form-section button:hover {
       background-color: #e60045;
     }
-    .login-form p {
+    .form-section p {
       margin-top: 10px;
       font-size: 14px;
       color: #ccc;
     }
-    .login-form a {
+    .form-section a {
       color: #ff0050;
       text-decoration: none;
       font-weight: bold;
     }
-    .login-form a:hover {
+    .form-section a:hover {
       text-decoration: underline;
     }
   </style>
@@ -162,18 +161,46 @@
     {% else %}
       <h1>Welcome to DesiBeats</h1>
       <p>Your personalized video platform.</p>
-      <!-- Embedded login form shown only for non-logged-in visitors -->
-      <div class="login-form">
-        <h2>Login</h2>
-        <form method="POST" action="/login">
-          <!-- Changed input name to "email" to match login route -->
-          <input type="email" name="email" placeholder="Email" required>
-          <input type="password" name="password" placeholder="Password" required>
-          <button type="submit">Log In</button>
-        </form>
-        <p>Don't have an account? <a href="/signup">Sign up here</a></p>
+      
+      <!-- Container for both login and signup forms -->
+      <div id="forms-container">
+        <!-- Login Form Section -->
+        <div id="login-form" class="form-section">
+          <h2>Login</h2>
+          <form method="POST" action="/login">
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Log In</button>
+          </form>
+          <p>Don't have an account? <a href="#" onclick="toggleForms(); return false;">Sign up here</a></p>
+        </div>
+        <!-- Signup Form Section (initially hidden) -->
+        <div id="signup-form" class="form-section" style="display: none;">
+          <h2>Sign Up</h2>
+          <form method="POST" action="/signup">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Sign Up</button>
+          </form>
+          <p>Already have an account? <a href="#" onclick="toggleForms(); return false;">Log in here</a></p>
+        </div>
       </div>
     {% endif %}
   </div>
+
+  <script>
+    function toggleForms() {
+      var loginForm = document.getElementById('login-form');
+      var signupForm = document.getElementById('signup-form');
+      if (loginForm.style.display === "none") {
+        loginForm.style.display = "block";
+        signupForm.style.display = "none";
+      } else {
+        loginForm.style.display = "none";
+        signupForm.style.display = "block";
+      }
+    }
+  </script>
 </body>
 </html>
