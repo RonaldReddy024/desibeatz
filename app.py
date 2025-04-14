@@ -41,7 +41,7 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Unified homepage: displays either generic or personalized content
+# Unified homepage: displays either generic or personalized content.
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -92,7 +92,7 @@ def login():
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route – after successful signup, automatically log in and redirect to the home page.
+# Signup route – processes POST requests; any GET request is redirected to home.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -101,13 +101,13 @@ def signup():
         password = request.form.get('password')
         if not display_name or not email or not password:
             flash("All fields are required.", "danger")
-            return redirect(url_for('signup'))
+            return redirect(url_for('home'))
         existing_user = User.query.filter_by(email=email).first()
         if existing_user:
             flash("Email already exists.", "warning")
-            return redirect(url_for('signup'))
+            return redirect(url_for('home'))
         new_user = User(username=display_name, email=email)
-        new_user.password = password
+        new_user.password = password  # This uses the password setter to hash the password.
         try:
             db.session.add(new_user)
             db.session.commit()
@@ -115,12 +115,13 @@ def signup():
             db.session.rollback()
             app.logger.error("Error creating user: %s", e)
             flash("Internal server error. Please try again later.", "danger")
-            return redirect(url_for('signup'))
+            return redirect(url_for('home'))
         
         flash("Account created! Welcome, " + display_name + ".", "success")
         login_user(new_user)
         return redirect(url_for('home'))
-    return render_template('signup.html')
+    # For GET requests, simply redirect back to home
+    return redirect(url_for('home'))
 
 # Logout route.
 @app.route('/logout')
