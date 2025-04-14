@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# Initialize Flask app and load SECRET_KEY from an environment variable.
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'  # Replace with a strong secret key that stays constant
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_default_secret_key_here')
+
+# Define base directory and configure SQLAlchemy with an absolute path for SQLite.
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'site.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize SQLAlchemy and Flask-Login.
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -19,7 +25,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(20), nullable=False)  # Display name
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-
+    
     @property
     def password(self):
         raise AttributeError("password is not a readable attribute")
@@ -36,8 +42,8 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Home page route.
-# If the user is logged in, render the logged‑in homepage (index1.html)
-# If not, render the non‑logged‑in homepage (index.html)
+# If the user is logged in, render the logged‑in homepage (index1.html).
+# Otherwise, render the non‑logged‑in homepage (index.html).
 @app.route('/')
 def home():
     if current_user.is_authenticated:
@@ -57,7 +63,7 @@ def login():
             return redirect(url_for('login'))
         user = User.query.filter_by(email=email).first()
         if user and user.verify_password(password):
-            # Adding remember=True so that the login persists beyond the current session.
+            # Using remember=True to persist the user's session.
             login_user(user, remember=True)
             flash("Login successful!", "success")
             return redirect(url_for('home'))
@@ -90,7 +96,6 @@ def signup():
             flash("Internal server error. Please try again later.", "danger")
             return redirect(url_for('signup'))
         flash("Account created! Welcome, {}.".format(username), "success")
-        # Also use remember=True here.
         login_user(new_user, remember=True)
         return redirect(url_for('home'))
     return render_template('signup.html')
@@ -104,9 +109,9 @@ def logout():
     return redirect(url_for('home'))
 
 if __name__ == '__main__':
-    import os
     with app.app_context():
-        # Only create the tables if they do not exist.
+        # Create database tables if they do not already exist.
         db.create_all()
+    # Bind to host 0.0.0.0 and use PORT from environment variables (defaulting to 5000)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
