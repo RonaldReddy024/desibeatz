@@ -12,18 +12,12 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Optional: Force HTTPS in production
+# Optional: Force HTTPS in production.
 @app.before_request
 def redirect_to_https():
     if not app.debug and request.headers.get('X-Forwarded-Proto', 'http') == 'http':
         url = request.url.replace('http://', 'https://', 1)
         return redirect(url, code=301)
-
-@app.route('/')
-def home():
-    if current_user.is_authenticated:
-        return redirect(url_for('index1_html'))
-    return redirect(url_for('index_html'))
 
 # User model storing display username, email, and password hash.
 class User(UserMixin, db.Model):
@@ -47,16 +41,10 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Public homepage for non-logged-in users.
-@app.route('/index.html')
-def index_html():
+# Unified homepage: displays either generic or personalized content
+@app.route('/')
+def home():
     return render_template('index.html')
-
-# Logged-in homepage that displays the user's username.
-@app.route('/index1.html')
-@login_required
-def index1_html():
-    return render_template('index1.html')
 
 # Explore route.
 @app.route('/explore.html')
@@ -84,7 +72,7 @@ def live_html():
         return render_template('video1.html')
     return render_template('video.html')
 
-# Login route – on successful login, user is redirected to index1.html.
+# Login route – on successful login, redirect to unified home page.
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -98,13 +86,13 @@ def login():
         if user and user.verify_password(password):
             login_user(user)
             flash("Login successful!", "success")
-            return redirect(url_for('index1_html'))
+            return redirect(url_for('home'))
         else:
             flash("Invalid email or password.", "danger")
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route – after successful signup, the new user is automatically logged in and redirected to index1.html.
+# Signup route – after successful signup, automatically log in and redirect to the home page.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -131,7 +119,7 @@ def signup():
         
         flash("Account created! Welcome, " + display_name + ".", "success")
         login_user(new_user)
-        return redirect(url_for('index1_html'))
+        return redirect(url_for('home'))
     return render_template('signup.html')
 
 # Logout route.
@@ -140,7 +128,7 @@ def signup():
 def logout():
     logout_user()
     flash("You have been logged out.", "info")
-    return redirect(url_for('index_html'))
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
     with app.app_context():
