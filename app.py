@@ -104,9 +104,9 @@ def logout():
     return redirect(url_for('home'))
 
 if __name__ == '__main__':
+    import os
     with app.app_context():
-        # Create the database tables if they do not exist.
-        # Remove or comment out db.drop_all() to ensure that user data persists.
-        # db.drop_all()  
+        # Only create the tables if they do not exist.
         db.create_all()
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
