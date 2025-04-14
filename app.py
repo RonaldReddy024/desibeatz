@@ -2,19 +2,19 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_login import (LoginManager, UserMixin, login_user,
+                         logout_user, login_required, current_user)
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# Initialize Flask app and load SECRET_KEY from an environment variable.
+# Initialize Flask app with environment-based configuration.
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_default_secret_key_here')
 
-# Define base directory and configure SQLAlchemy with an absolute path for SQLite.
+# Configure SQLAlchemy with an absolute path for SQLite.
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'site.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize SQLAlchemy and Flask-Login.
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -42,8 +42,7 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Home page route.
-# If the user is logged in, render the logged‑in homepage (index1.html).
-# Otherwise, render the non‑logged‑in homepage (index.html).
+# If a user is logged in, render the logged‑in homepage (index1.html). Otherwise, render index.html.
 @app.route('/')
 def home():
     if current_user.is_authenticated:
@@ -51,7 +50,9 @@ def home():
     else:
         return render_template('index.html')
 
-# Login route – displays the login page and processes login submissions.
+# -------------------- Authentication Routes --------------------
+
+# Login route: displays the login page and processes login submissions.
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -63,8 +64,7 @@ def login():
             return redirect(url_for('login'))
         user = User.query.filter_by(email=email).first()
         if user and user.verify_password(password):
-            # Using remember=True to persist the user's session.
-            login_user(user, remember=True)
+            login_user(user, remember=True)  # Using remember=True to persist sessions.
             flash("Login successful!", "success")
             return redirect(url_for('home'))
         else:
@@ -72,7 +72,7 @@ def login():
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route – displays the signup page and processes signup submissions.
+# Signup route: displays the signup page and processes signup submissions.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -86,7 +86,7 @@ def signup():
             flash("Email already exists.", "warning")
             return redirect(url_for('signup'))
         new_user = User(username=username, email=email)
-        new_user.password = password  # This uses the password setter to hash the password.
+        new_user.password = password  # This hashes the password.
         try:
             db.session.add(new_user)
             db.session.commit()
@@ -100,7 +100,7 @@ def signup():
         return redirect(url_for('home'))
     return render_template('signup.html')
 
-# Logout route – logs the user out and redirects to the home page.
+# Logout route: logs out the user.
 @app.route('/logout')
 @login_required
 def logout():
@@ -108,10 +108,38 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
+# -------------------- Dummy Routes for Sidebar Links --------------------
+
+@app.route('/explore')
+@login_required
+def explore():
+    # Replace with: return render_template('explore.html') if you have a template.
+    return "<h1>Explore Page (Under Construction)</h1>"
+
+@app.route('/upload')
+@login_required
+def upload():
+    # Replace with: return render_template('upload.html') if you have a template.
+    return "<h1>Upload Page (Under Construction)</h1>"
+
+@app.route('/profile')
+@login_required
+def profile():
+    # Replace with: return render_template('profile.html') if you have a template.
+    return "<h1>Profile Page for {} (Under Construction)</h1>".format(current_user.username)
+
+@app.route('/followers')
+@login_required
+def followers():
+    # Replace with: return render_template('followers.html') if you have a template.
+    return "<h1>Followers Page (Under Construction)</h1>"
+
+# ------------------------------------------------------------------
+
 if __name__ == '__main__':
     with app.app_context():
-        # Create database tables if they do not already exist.
+        # Create the database tables if they do not exist.
         db.create_all()
-    # Bind to host 0.0.0.0 and use PORT from environment variables (defaulting to 5000)
+    # Bind to 0.0.0.0 and use PORT from environment variables, defaulting to 5000 locally.
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
