@@ -72,6 +72,7 @@
       margin-left: 200px;
       flex-grow: 1;
       padding: 20px;
+      /* Use a light overlay for content to enhance readability */
       background-color: rgba(255,255,255,0.9);
       color: #000;
       overflow-y: auto;
@@ -137,15 +138,15 @@
 <body>
   <div class="sidebar">
     <div class="logo">
-      <a href="/index.html" title="Go to Home">
-        <img src="../static/images/desibeatz_logo.png" alt="DesiBeats Logo">
+      <a href="/" title="Go to Home">
+        <img src="{{ url_for('static', filename='images/desibeatz_logo.png') }}" alt="DesiBeats Logo">
       </a>
     </div>
     <div class="search-container">
       <input type="search" placeholder="Search">
     </div>
     <nav>
-      <a href="/index.html" class="active"><i class="fas fa-home"></i> For You</a>
+      <a href="/" class="active"><i class="fas fa-home"></i> For You</a>
       <a href="/explore.html"><i class="fas fa-compass"></i> Explore</a>
       <a href="/following.html"><i class="fas fa-users"></i> Following</a>
       <a href="/upload.html"><i class="fas fa-plus-square"></i> Upload</a>
@@ -155,18 +156,24 @@
     </nav>
   </div>
   <div id="content">
-    <h1>Welcome to DesiBeats</h1>
-    <p>Your personalized video platform.</p>
-    <!-- Embedded login form -->
-    <div class="login-form">
-      <h2>Login</h2>
-      <form method="POST" action="/login">
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Log In</button>
-      </form>
-      <p>Don't have an account? <a href="/signup">Sign up here</a></p>
-    </div>
+    {% if current_user.is_authenticated %}
+      <h1>Welcome, {{ current_user.username }}!</h1>
+      <p>Your personalized video platform. Enjoy all the features of DesiBeats.</p>
+    {% else %}
+      <h1>Welcome to DesiBeats</h1>
+      <p>Your personalized video platform.</p>
+      <!-- Embedded login form shown only for non-logged-in visitors -->
+      <div class="login-form">
+        <h2>Login</h2>
+        <form method="POST" action="/login">
+          <!-- Changed input name to "email" to match login route -->
+          <input type="email" name="email" placeholder="Email" required>
+          <input type="password" name="password" placeholder="Password" required>
+          <button type="submit">Log In</button>
+        </form>
+        <p>Don't have an account? <a href="/signup">Sign up here</a></p>
+      </div>
+    {% endif %}
   </div>
 </body>
 </html>
