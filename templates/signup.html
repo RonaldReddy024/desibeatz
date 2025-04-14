@@ -1,9 +1,9 @@
-from flask import Flask, request, session, redirect, url_for, render_template_string
+from flask import Flask, request, session, redirect, url_for, render_template, render_template_string
 import sqlite3
 import hashlib
 
 app = Flask(__name__)
-app.secret_key = 'your_super_secret_key'  # Replace this with a strong secret key
+app.secret_key = 'your_super_secret_key'  # Replace with a strong secret key
 
 # Database connection helper
 def get_db():
@@ -11,7 +11,7 @@ def get_db():
     conn.row_factory = sqlite3.Row
     return conn
 
-# Initialize the database with a users table containing username, email, and hashed password
+# Initialize the database with a users table (username, email, and hashed password)
 def init_db():
     db = get_db()
     db.execute('''
@@ -212,7 +212,7 @@ def signup():
         username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
-        # Hash the password using SHA-256; for production, consider bcrypt or Argon2.
+        # Hash the password using SHA-256; in production, consider using bcrypt or Argon2.
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
         try:
@@ -222,7 +222,7 @@ def signup():
             db.commit()
             return 'User registered successfully! <a href="/login">Login here</a>'
         except sqlite3.IntegrityError as e:
-            # Catches duplicate username or email errors.
+            # Handles duplicate username or email errors.
             return f'Error: {str(e)}'
     return render_template_string(signup_template)
 
@@ -238,15 +238,18 @@ def login():
                           (username, password_hash)).fetchone()
         if user:
             session['user_id'] = user['id']
-            return 'Logged in successfully! <a href="/dashboard">Go to Dashboard</a>'
+            # Automatically redirect to the homepage (index1.html)
+            return redirect(url_for('index1'))
         else:
             return 'Invalid credentials, please try again.'
     return render_template_string(login_template)
 
-@app.route('/dashboard')
-def dashboard():
+# New route for the logged-in homepage (index1.html)
+@app.route('/index1')
+def index1():
     if 'user_id' in session:
-        return 'Welcome to your dashboard! <a href="/logout">Logout</a>'
+        # Render the homepage template (make sure index1.html is in your templates folder)
+        return render_template('index1.html')
     return redirect(url_for('login'))
 
 @app.route('/logout')
