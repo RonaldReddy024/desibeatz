@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key_here'
+app.config['SECRET_KEY'] = 'your_secret_key_here'  # Replace with a strong secret key that stays constant
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -12,20 +13,13 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Optional: Force HTTPS in production.
-@app.before_request
-def redirect_to_https():
-    if not app.debug and request.headers.get('X-Forwarded-Proto', 'http') == 'http':
-        url = request.url.replace('http://', 'https://', 1)
-        return redirect(url, code=301)
-
-# User model storing display username, email, and password hash.
+# User model for storing user details.
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), nullable=False)  # Display name for greeting
+    username = db.Column(db.String(20), nullable=False)  # Display name
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    
+
     @property
     def password(self):
         raise AttributeError("password is not a readable attribute")
@@ -41,38 +35,17 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Unified homepage: displays either generic or personalized content.
+# Home page route.
+# If the user is logged in, render the logged‑in homepage (index1.html)
+# If not, render the non‑logged‑in homepage (index.html)
 @app.route('/')
 def home():
-    return render_template('index.html')
-
-# Explore route.
-@app.route('/explore.html')
-def explore_html():
     if current_user.is_authenticated:
-        return render_template('explore1.html')
-    return render_template('explore.html')
+        return render_template('index1.html')
+    else:
+        return render_template('index.html')
 
-# Profile route (protected).
-@app.route('/profile.html')
-@login_required
-def profile_html():
-    return render_template('profile1.html')
-
-# Upload route (protected).
-@app.route('/upload.html')
-@login_required
-def upload_html():
-    return render_template('upload1.html')
-
-# Live route.
-@app.route('/live.html')
-def live_html():
-    if current_user.is_authenticated:
-        return render_template('video1.html')
-    return render_template('video.html')
-
-# Login route – on successful login, redirect to unified home page.
+# Login route – displays the login page and processes login submissions.
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -84,7 +57,8 @@ def login():
             return redirect(url_for('login'))
         user = User.query.filter_by(email=email).first()
         if user and user.verify_password(password):
-            login_user(user)
+            # Adding remember=True so that the login persists beyond the current session.
+            login_user(user, remember=True)
             flash("Login successful!", "success")
             return redirect(url_for('home'))
         else:
@@ -92,21 +66,20 @@ def login():
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route – processes POST requests; any GET request is redirected to home.
+# Signup route – displays the signup page and processes signup submissions.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
-        display_name = request.form.get('username')
+        username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
-        if not display_name or not email or not password:
+        if not username or not email or not password:
             flash("All fields are required.", "danger")
-            return redirect(url_for('home'))
-        existing_user = User.query.filter_by(email=email).first()
-        if existing_user:
+            return redirect(url_for('signup'))
+        if User.query.filter_by(email=email).first():
             flash("Email already exists.", "warning")
-            return redirect(url_for('home'))
-        new_user = User(username=display_name, email=email)
+            return redirect(url_for('signup'))
+        new_user = User(username=username, email=email)
         new_user.password = password  # This uses the password setter to hash the password.
         try:
             db.session.add(new_user)
@@ -115,15 +88,14 @@ def signup():
             db.session.rollback()
             app.logger.error("Error creating user: %s", e)
             flash("Internal server error. Please try again later.", "danger")
-            return redirect(url_for('home'))
-        
-        flash("Account created! Welcome, " + display_name + ".", "success")
-        login_user(new_user)
+            return redirect(url_for('signup'))
+        flash("Account created! Welcome, {}.".format(username), "success")
+        # Also use remember=True here.
+        login_user(new_user, remember=True)
         return redirect(url_for('home'))
-    # For GET requests, simply redirect back to home
-    return redirect(url_for('home'))
+    return render_template('signup.html')
 
-# Logout route.
+# Logout route – logs the user out and redirects to the home page.
 @app.route('/logout')
 @login_required
 def logout():
@@ -133,5 +105,8 @@ def logout():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Ensure database tables are created.
+        # Create the database tables if they do not exist.
+        # Remove or comment out db.drop_all() to ensure that user data persists.
+        # db.drop_all()  
+        db.create_all()
     app.run(debug=True)
