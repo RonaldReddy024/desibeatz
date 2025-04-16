@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 from datetime import datetime
+import logging
 
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
@@ -25,6 +26,9 @@ app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
+# Set up debug logging.
+logging.basicConfig(level=logging.DEBUG)
+
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -41,7 +45,7 @@ class User(UserMixin, db.Model):
 
     @property
     def password(self):
-        raise AttributeError("Password is not readable.")
+        raise AttributeError("password is not a readable attribute")
 
     @password.setter
     def password(self, password):
@@ -65,7 +69,7 @@ def load_user(user_id):
 # Routes
 # ------------------------------------------------------------------
 
-# Home page: if logged in, display signed-in homepage; otherwise display public homepage.
+# Home route: if logged in, render the signed-in homepage; otherwise, render the public homepage.
 @app.route('/')
 def home():
     if current_user.is_authenticated:
@@ -77,52 +81,54 @@ def home():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        # Retrieve credentials from the form.
-        email = request.form.get('email')
-        password = request.form.get('password')
-        if not email or not password:
-            flash("All fields are required.", "danger")
-            return redirect(url_for('login'))
-        user = User.query.filter_by(email=email).first()
-        if user and user.verify_password(password):
-            login_user(user, remember=True)
-            flash("Login successful!", "success")
-            return redirect(url_for('home'))
-        else:
-            flash("Invalid email or password.", "danger")
-            return redirect(url_for('login'))
-    return render_template('login.html')
+    try:
+        if request.method == 'POST':
+            # Retrieve credentials from the form.
+            email = request.form.get('email')
+            password = request.form.get('password')
+            if not email or not password:
+                flash("All fields are required.", "danger")
+                return redirect(url_for('login'))
+            user = User.query.filter_by(email=email).first()
+            if user and user.verify_password(password):
+                login_user(user, remember=True)
+                flash("Login successful!", "success")
+                return redirect(url_for('home'))
+            else:
+                flash("Invalid email or password.", "danger")
+                return redirect(url_for('login'))
+        return render_template('login.html')
+    except Exception as e:
+        app.logger.error("Error during login: %s", e)
+        flash("An error occurred during login: " + str(e), "danger")
+        return redirect(url_for('login'))
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
-    if request.method == 'POST':
-        # Retrieve signup data.
-        username = request.form.get('username')
-        email = request.form.get('email')
-        password = request.form.get('password')
-        if not username or not email or not password:
-            flash("All fields are required.", "danger")
-            return redirect(url_for('signup'))
-        if User.query.filter_by(email=email).first():
-            flash("Email already exists.", "warning")
-            return redirect(url_for('signup'))
-        # Create and add the new user.
-        new_user = User(username=username, email=email)
-        new_user.password = password  # This hashes the password.
-        try:
+    try:
+        if request.method == 'POST':
+            username = request.form.get('username')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            if not username or not email or not password:
+                flash("All fields are required.", "danger")
+                return redirect(url_for('signup'))
+            if User.query.filter_by(email=email).first():
+                flash("Email already exists.", "warning")
+                return redirect(url_for('signup'))
+            new_user = User(username=username, email=email)
+            new_user.password = password  # The setter hashes the password.
             db.session.add(new_user)
             db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error("Error creating user: %s", e)
-            flash("Internal server error. Please try again later.", "danger")
-            return redirect(url_for('signup'))
-        flash("Account created! Welcome, {}.".format(username), "success")
-        login_user(new_user, remember=True)
-        # Redirect to signed-in homepage.
-        return redirect(url_for('home'))
-    return render_template('signup.html')
+            flash("Account created! Welcome, {}.".format(username), "success")
+            login_user(new_user, remember=True)
+            return redirect(url_for('home'))
+        return render_template('signup.html')
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error("Error during signup: %s", e)
+        flash("An error occurred during signup: " + str(e), "danger")
+        return redirect(url_for('signup'))
 
 @app.route('/logout')
 @login_required
@@ -132,12 +138,6 @@ def logout():
     return redirect(url_for('home'))
 
 # -------------------- Functional Routes --------------------
-
-@app.route('/explore')
-@login_required
-def explore():
-    # Placeholder for explore page.
-    return "<h1>Explore Page (Under Construction)</h1>"
 
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
@@ -159,7 +159,6 @@ def upload():
                 db.session.add(new_video)
                 db.session.commit()
                 flash("Video uploaded successfully!", "success")
-                # Redirect back to the signed-in homepage.
                 return redirect(url_for('home'))
             except Exception as e:
                 db.session.rollback()
@@ -171,13 +170,16 @@ def upload():
 @app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
-    # Placeholder for livestream functionality.
-    # Later, integrate your livestream logic (e.g., WebSockets, third-party streaming, etc.).
     if request.method == 'POST':
-        # Process livestream start/stop actions here.
+        # Livestream start/stop processing could go here.
         flash("Livestream functionality is under construction.", "info")
         return redirect(url_for('livestream'))
     return render_template('livestream.html')
+
+@app.route('/explore')
+@login_required
+def explore():
+    return "<h1>Explore Page (Under Construction)</h1>"
 
 @app.route('/profile')
 @login_required
@@ -195,6 +197,6 @@ def followers():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # Create tables if they do not exist.
+        db.create_all()  # Ensure the database tables are created.
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=True)
