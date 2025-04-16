@@ -13,10 +13,12 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'site.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Configure upload folder and allowed extensions
+# Configure upload folder
 UPLOAD_FOLDER = os.path.join(basedir, 'static/uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Allowed file extensions
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'avi'}
 
@@ -24,7 +26,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# Many-to-many tables for followers, likes, and bookmarks
+# --- M2M association tables ---
 followers = db.Table('followers',
     db.Column('follower_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('followed_id', db.Integer, db.ForeignKey('user.id'))
@@ -40,7 +42,7 @@ bookmarks_table = db.Table('bookmarks',
     db.Column('video_id', db.Integer, db.ForeignKey('video.id'))
 )
 
-# ------------------- Models -------------------
+# --- Models ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), nullable=False)
@@ -48,13 +50,16 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     bio = db.Column(db.Text, default='')
     profile_picture = db.Column(db.String(120), default='default_profile.png')
+    # Relationship: one user -> many videos
     videos = db.relationship('Video', backref='uploader', lazy=True)
+    # Self-referential followers relationship
     followers = db.relationship(
         'User', secondary=followers,
         primaryjoin=(followers.c.followed_id == id),
         secondaryjoin=(followers.c.follower_id == id),
         backref=db.backref('following', lazy='dynamic'), lazy='dynamic'
     )
+    # Relationship for comments
     comments = db.relationship('Comment', backref='author', lazy=True)
 
     @property
@@ -90,6 +95,7 @@ class Comment(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# Create tables
 with app.app_context():
     db.create_all()
 
@@ -98,8 +104,7 @@ with app.app_context():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# ---------------- Sidebar Template ----------------
-# Note the specific sections you requested.
+# ----------- SIDEBAR -----------
 sidebar_template = """
 <div class="sidebar">
   <div class="sidebar-header">
@@ -121,23 +126,22 @@ sidebar_template = """
   </ul>
 </div>
 <style>
-  /* Import a custom font (e.g., Montserrat) to mimic the TikTok style more closely */
-  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600&display=swap');
+  /* Use Proxima Nova from a third-party CDN or your own hosting */
+  @import url('https://fonts.cdnfonts.com/css/proxima-nova-2');
 
   body {
-    font-family: 'Montserrat', Arial, sans-serif;
-    margin: 0;
-    padding: 0;
+    font-family: 'Proxima Nova', Arial, sans-serif;
+    margin: 0; padding: 0;
+    background-color: #000; /* For better contrast, or remove if you prefer the GIF only */
+    color: #fff; /* You can keep text white for contrast */
   }
   .sidebar {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 220px;
-    height: 100vh;
+    top: 0; left: 0;
+    width: 220px; height: 100vh;
     background-color: #000;
-    color: #fff;
     padding-top: 20px;
+    z-index: 999;
   }
   .sidebar .sidebar-header {
     text-align: center;
@@ -153,7 +157,7 @@ sidebar_template = """
   .sidebar ul li a {
     color: #fff;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: normal;
     display: block;
     padding: 10px 20px;
   }
@@ -163,11 +167,13 @@ sidebar_template = """
 </style>
 """
 
-# ---------------- Routes ----------------
-
-# 1) Home/For You: Show a translucent welcome message + a few embedded YouTube videos for demonstration
+# ------------------ HOME (FOR YOU) PAGE ------------------
+# Large, vertically stacked videos from the database
 @app.route('/')
 def home():
+    # Get all videos, newest first
+    videos = Video.query.order_by(Video.timestamp.desc()).all()
+    # We’ll display them in a vertical feed with no white borders
     home_html = """
     <!DOCTYPE html>
     <html lang="en">
@@ -178,72 +184,75 @@ def home():
         body {
           background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
           background-size: cover;
+          color: #fff;
         }
         .main-content {
           margin-left: 220px;
-          min-height: 100vh;
           padding: 20px;
+          /* We want a scrolling feed of large videos */
         }
-        /* The translucent center text for the welcome message */
         .welcome-message {
           text-align: center;
-          background: rgba(255,255,255,0.2);
-          color: #000;
+          background: rgba(255, 255, 255, 0.2);
+          color: #000; /* black text on translucent white */
           padding: 20px;
           border-radius: 10px;
           margin: 40px auto;
           width: 60%;
           font-size: 2em;
-          font-weight: 700;
+          font-weight: 600;
         }
-        .video-grid {
+        /* Large vertical feed */
+        .video-feed {
           display: flex;
-          flex-wrap: wrap;
-          gap: 20px;
+          flex-direction: column;
+          align-items: center; /* center the videos horizontally */
+          gap: 40px; /* space between videos */
           margin-top: 30px;
-          justify-content: center;
         }
-        .video-grid .video-item {
-          background: #fff;
-          width: 360px;
-          padding: 10px;
-          border-radius: 8px;
+        .video-card {
+          width: 400px; /* or 500px if you want bigger */
         }
-        .video-grid .video-item iframe {
+        .video-card video {
           width: 100%;
-          height: 200px;
-          border: none;
-          border-radius: 5px;
+          height: auto;
+          display: block;
+          border: none; /* remove any border */
+          background: #000;
+        }
+        .video-info {
+          margin-top: 5px;
+          font-size: 0.9em;
+          color: #fff;
         }
       </style>
     </head>
     <body>
       {%% include 'sidebar' %%}
       <div class="main-content">
-        <div class="welcome-message">
-          Welcome to Desibeatz
-        </div>
-        <div class="video-grid">
-          <!-- Example YouTube iframes for demonstration -->
-          <div class="video-item">
-            <iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" allowfullscreen></iframe>
-          </div>
-          <div class="video-item">
-            <iframe src="https://www.youtube.com/embed/G4qUZfpx4Tc" allowfullscreen></iframe>
-          </div>
-          <div class="video-item">
-            <iframe src="https://www.youtube.com/embed/9bZkp7q19f0" allowfullscreen></iframe>
-          </div>
-          <!-- Add more iframes as desired -->
+        <div class="welcome-message">Welcome to Desibeatz</div>
+        <div class="video-feed">
+          {% for vid in videos %}
+            <div class="video-card">
+              <video controls>
+                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+              <div class="video-info">
+                <strong>{{ vid.title }}</strong><br>
+                Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
+              </div>
+            </div>
+          {% endfor %}
         </div>
       </div>
     </body>
     </html>
     """
     home_html = home_html.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(home_html)
+    return render_template_string(home_html, videos=videos)
 
-# 2) Explore route: just reusing your existing logic for exploring uploaded videos
+# ------------------ EXPLORE PAGE ------------------
 @app.route('/explore', methods=['GET', 'POST'])
 def explore():
     if request.method == 'POST' and current_user.is_authenticated:
@@ -255,6 +264,7 @@ def explore():
             db.session.commit()
             flash("Comment added!", "success")
             return redirect(url_for('explore'))
+
     videos = Video.query.order_by(Video.timestamp.desc()).all()
     explore_page = """
     <!DOCTYPE html>
@@ -264,45 +274,41 @@ def explore():
       <title>Explore Videos</title>
       <style>
         .main-content {
-          margin-left:220px;
-          padding:20px;
+          margin-left: 220px;
+          padding: 20px;
         }
         .video-container {
-          margin: 10px; 
-          display: inline-block; 
-          vertical-align: top; 
-          width: 340px; 
-          background: #fff; 
-          padding: 10px; 
-          border-radius: 5px;
+          margin: 20px;
+          display: inline-block;
+          vertical-align: top;
+          width: 320px; /* make them narrower, no white border */
         }
-        video {
-          width:320px; 
-          height:240px; 
-          background:#000; 
-          display:block; 
-          margin-bottom:10px;
+        .video-container video {
+          width: 100%;
+          background: #000;
+          border: none;
         }
         .actions button {
-          margin-right:5px; 
-          padding:5px 10px; 
-          background:#111; 
-          color:#fff; 
-          border:none; 
-          border-radius:3px; 
-          cursor:pointer;
+          margin-right: 5px;
+          padding: 5px 10px;
+          background: #111;
+          color: #fff;
+          border: none;
+          border-radius: 3px;
+          cursor: pointer;
         }
         .actions button:hover {
-          background:#444;
+          background: #444;
         }
         .comment-section {
-          margin-top:10px;
+          margin-top: 10px;
         }
         .comment {
-          background:#eee; 
-          padding:5px; 
-          border-radius:3px; 
-          margin-bottom:5px;
+          background: #333;
+          padding: 5px;
+          border-radius: 3px;
+          margin-bottom: 5px;
+          color: #fff;
         }
       </style>
     </head>
@@ -312,12 +318,13 @@ def explore():
         <h2>Explore Videos</h2>
         {% for vid in videos %}
           <div class="video-container">
-            <h3>{{ vid.title }}</h3>
-            <p>Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
             <video controls>
               <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
               Your browser does not support the video tag.
             </video>
+            <p style="margin:5px 0;"><strong>{{ vid.title }}</strong></p>
+            <p style="font-size:0.85em;">Uploaded by: {{ vid.uploader.username }}  
+               on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
             <div class="actions">
               <a href="{{ url_for('toggle_like', video_id=vid.id) }}">
                 <button>Like ({{ vid.liked_by|length }})</button>
@@ -328,25 +335,25 @@ def explore():
               <button onclick="alert('Share Link: {{ url_for('uploaded_file', filename=vid.filename, _external=True) }}')">Share</button>
             </div>
             <div class="comment-section">
-              <h4>Comments:</h4>
+              <h4 style="margin:10px 0 5px;">Comments:</h4>
               {% for c in vid.comments %}
                 <div class="comment">
-                  <strong>{{ c.author.username }}</strong>: {{ c.content }}<br>
+                  <strong>{{ c.author.username }}</strong>: {{ c.content }} <br>
                   <small>{{ c.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
                 </div>
               {% endfor %}
               {% if current_user.is_authenticated %}
-              <form method="POST" action="{{ url_for('explore') }}">
-                <input type="hidden" name="video_id" value="{{ vid.id }}">
-                <input type="text" name="comment" placeholder="Add a comment..." required style="width:80%;">
-                <button type="submit">Comment</button>
-              </form>
+                <form method="POST" action="{{ url_for('explore') }}">
+                  <input type="hidden" name="video_id" value="{{ vid.id }}">
+                  <input type="text" name="comment" placeholder="Add a comment..." required style="width:70%;">
+                  <button type="submit" style="padding:5px 10px;">Comment</button>
+                </form>
               {% endif %}
             </div>
           </div>
         {% endfor %}
         <br>
-        <a href="{{ url_for('home') }}">Back to Home</a>
+        <a href="{{ url_for('home') }}" style="color:#fff; text-decoration:none;">Back to Home</a>
       </div>
     </body>
     </html>
@@ -354,11 +361,10 @@ def explore():
     explore_page = explore_page.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(explore_page, videos=videos)
 
-# 3) Following route (placeholder)
+# ------------------ FOLLOWING (Placeholder) ------------------
 @app.route('/following')
 @login_required
 def following():
-    # For demonstration, just a placeholder page
     following_page = """
     <!DOCTYPE html>
     <html lang="en">
@@ -369,6 +375,7 @@ def following():
         .main-content {
           margin-left: 220px;
           padding: 20px;
+          color: #fff;
         }
       </style>
     </head>
@@ -377,7 +384,7 @@ def following():
       <div class="main-content">
         <h2>Your Following Feed</h2>
         <p>This is a placeholder for following content.</p>
-        <a href="{{ url_for('home') }}">Back to Home</a>
+        <a href="{{ url_for('home') }}" style="color:#fff; text-decoration:none;">Back to Home</a>
       </div>
     </body>
     </html>
@@ -385,7 +392,7 @@ def following():
     following_page = following_page.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(following_page)
 
-# 4) Upload
+# ------------------ UPLOAD ------------------
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
@@ -407,6 +414,7 @@ def upload():
         db.session.add(new_video)
         db.session.commit()
         flash("Video uploaded successfully!", "success")
+        # Uploaded videos automatically appear on Explore (public) + user's profile
         return redirect(url_for('profile'))
 
     upload_page = """
@@ -419,26 +427,32 @@ def upload():
         .main-content {
           margin-left:220px; 
           padding:20px;
+          color:#fff;
         }
         .upload-form {
           max-width: 400px; 
           margin: 50px auto; 
-          background: #fff; 
+          background: #222; 
           padding: 20px; 
           border-radius: 5px;
         }
         input, textarea {
-          width:100%; 
+          width: 100%; 
           padding:10px; 
-          margin:10px 0; 
+          margin:10px 0;
+          color:#000;
         }
         button {
           padding:10px; 
           width:100%; 
-          background:#111; 
+          background:#ff0066; 
           color:#fff; 
           border:none; 
           border-radius:5px;
+          cursor:pointer;
+        }
+        button:hover {
+          background:#ff3399;
         }
       </style>
     </head>
@@ -446,7 +460,7 @@ def upload():
       {%% include 'sidebar' %%}
       <div class="main-content">
         <div class="upload-form">
-          <h2>Upload Your Video</h2>
+          <h2 style="margin-bottom:20px;">Upload Your Video</h2>
           <form method="POST" enctype="multipart/form-data">
             <input type="text" name="title" placeholder="Video Title" required>
             <input type="file" name="video" required>
@@ -460,7 +474,7 @@ def upload():
     upload_page = upload_page.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(upload_page)
 
-# 5) Livestream
+# ------------------ LIVESTREAM ------------------
 @app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
@@ -486,27 +500,30 @@ def livestream():
         .main-content {
           margin-left:220px; 
           padding:20px; 
+          color:#fff;
           text-align:center;
         }
         video {
           width:50%; 
           margin-top:20px;
+          background:#000;
         }
         input {
           padding:10px; 
           margin:10px 0; 
           width:50%;
+          color:#000;
         }
         button {
           padding:10px 20px; 
-          background:#111; 
+          background:#ff0066; 
           color:#fff; 
           border:none; 
           border-radius:5px; 
           cursor:pointer;
         }
         button:hover {
-          background:#444;
+          background:#ff3399;
         }
       </style>
     </head>
@@ -541,7 +558,7 @@ def livestream():
           });
         </script>
         <br>
-        <a href="{{ url_for('home') }}">Back to Home</a>
+        <a href="{{ url_for('home') }}" style="color:#fff; text-decoration:none;">Back to Home</a>
       </div>
     </body>
     </html>
@@ -549,7 +566,7 @@ def livestream():
     livestream_page = livestream_page.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(livestream_page)
 
-# 6) Toggle Like / Bookmark
+# ------------------ LIKE & BOOKMARK ------------------
 @app.route('/like/<int:video_id>')
 @login_required
 def toggle_like(video_id):
@@ -572,7 +589,7 @@ def toggle_bookmark(video_id):
     db.session.commit()
     return redirect(request.referrer or url_for('explore'))
 
-# 7) Profile
+# ------------------ PROFILE ------------------
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -597,7 +614,7 @@ def profile():
     user_videos = Video.query.filter_by(user_id=current_user.id, is_livestream=False).order_by(Video.timestamp.desc()).all()
     user_livestreams = Video.query.filter_by(user_id=current_user.id, is_livestream=True).order_by(Video.timestamp.desc()).all()
     followers_list = current_user.followers.all()
-    
+
     profile_page = """
     <!DOCTYPE html>
     <html lang="en">
@@ -612,9 +629,10 @@ def profile():
         .profile-container {
           max-width:900px; 
           margin:0 auto; 
-          background:#fff; 
+          background:#111; 
           padding:20px; 
           border-radius:5px;
+          color:#fff;
         }
         .profile-header {
           display:flex; 
@@ -625,6 +643,7 @@ def profile():
           height:120px; 
           border-radius:50%; 
           margin-right:20px;
+          background:#000;
         }
         .profile-info {
           flex:1;
@@ -633,12 +652,13 @@ def profile():
           margin-top:30px;
         }
         .video-item {
-          margin-bottom:15px;
+          margin-bottom:20px;
         }
         video {
           width:320px; 
-          height:240px; 
+          height:auto; 
           background:#000;
+          border:none;
         }
         .follower-item {
           display:inline-block; 
@@ -647,6 +667,26 @@ def profile():
         }
         .follower-item img {
           border-radius:50%;
+          width:50px;
+          height:50px;
+          background:#000;
+        }
+        input, textarea {
+          color:#000; 
+          width:100%; 
+          padding:10px; 
+          margin:10px 0;
+        }
+        button {
+          padding:10px; 
+          background:#ff0066; 
+          color:#fff; 
+          border:none; 
+          border-radius:5px;
+          cursor:pointer;
+        }
+        button:hover {
+          background:#ff3399;
         }
       </style>
     </head>
@@ -657,12 +697,12 @@ def profile():
           <div class="profile-header">
             <img src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Profile Picture">
             <div class="profile-info">
-              <h2>{{ current_user.username }}</h2>
+              <h2 style="margin:0;">{{ current_user.username }}</h2>
               <p>{{ current_user.bio }}</p>
               <form method="POST" enctype="multipart/form-data">
-                <textarea name="bio" rows="3" placeholder="Update your bio..." style="width:100%; padding:10px; margin:10px 0;">{{ current_user.bio }}</textarea><br>
-                <input type="file" name="profile_picture" style="padding:10px; margin:10px 0;">
-                <button type="submit" style="padding:10px; background:#111; color:#fff; border:none; border-radius:5px;">Update Profile</button>
+                <textarea name="bio" rows="3" placeholder="Update your bio...">{{ current_user.bio }}</textarea><br>
+                <input type="file" name="profile_picture">
+                <button type="submit">Update Profile</button>
               </form>
             </div>
           </div>
@@ -670,8 +710,8 @@ def profile():
             <h3>Your Videos</h3>
             {% for vid in user_videos %}
               <div class="video-item">
-                <h4>{{ vid.title }}</h4>
-                <p>Uploaded on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+                <h4 style="margin-bottom:5px;">{{ vid.title }}</h4>
+                <p style="margin-bottom:5px;">Uploaded on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
                 <video controls>
                   <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
                   Your browser does not support the video tag.
@@ -685,8 +725,8 @@ def profile():
             <h3>Your Livestreams</h3>
             {% for live in user_livestreams %}
               <div class="video-item">
-                <h4>{{ live.title }}</h4>
-                <p>Livestream on {{ live.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+                <h4 style="margin-bottom:5px;">{{ live.title }}</h4>
+                <p style="margin-bottom:5px;">Livestream on {{ live.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
                 <video controls>
                   <source src="{{ url_for('uploaded_file', filename=live.filename) }}" type="video/mp4">
                   Your browser does not support the video tag.
@@ -700,7 +740,8 @@ def profile():
             <h3>Your Followers</h3>
             {% for follower in followers_list %}
               <div class="follower-item">
-                <img src="{{ url_for('uploaded_file', filename=follower.profile_picture) }}" alt="Follower" width="50" height="50"><br>
+                <img src="{{ url_for('uploaded_file', filename=follower.profile_picture) }}" alt="Follower">
+                <br>
                 <span>{{ follower.username }}</span>
               </div>
             {% else %}
@@ -715,7 +756,7 @@ def profile():
     profile_page = profile_page.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(profile_page, user_videos=user_videos, user_livestreams=user_livestreams, followers_list=followers_list)
 
-# 8) Login/Logout
+# ------------------ LOGIN ------------------
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -742,12 +783,13 @@ def login():
       <style>
         .main-content {
           margin-left:220px; 
-          padding:20px;
+          padding:20px; 
+          color:#fff;
         }
         .login-form {
           max-width:400px; 
           margin:50px auto; 
-          background:#fff; 
+          background:#111; 
           padding:20px; 
           border-radius:5px;
         }
@@ -755,14 +797,18 @@ def login():
           width:100%; 
           padding:10px; 
           margin:10px 0;
+          color:#000;
         }
         button {
           padding:10px; 
           width:100%; 
-          background:#111; 
+          background:#ff0066; 
           color:#fff; 
           border:none; 
           border-radius:5px;
+        }
+        button:hover {
+          background:#ff3399;
         }
       </style>
     </head>
@@ -770,13 +816,13 @@ def login():
       {%% include 'sidebar' %%}
       <div class="main-content">
         <div class="login-form">
-          <h2>Login</h2>
+          <h2 style="margin-top:0;">Login</h2>
           <form method="POST">
             <input type="text" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Login</button>
           </form>
-          <p>Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a></p>
+          <p>Don't have an account? <a href="{{ url_for('signup') }}" style="color:#ff0066;">Sign Up</a></p>
         </div>
       </div>
     </body>
@@ -785,6 +831,7 @@ def login():
     login_form = login_form.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(login_form)
 
+# ------------------ SIGNUP ------------------
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -814,12 +861,13 @@ def signup():
       <style>
         .main-content {
           margin-left:220px; 
-          padding:20px;
+          padding:20px; 
+          color:#fff;
         }
         .signup-form {
           max-width:400px; 
           margin:50px auto; 
-          background:#fff; 
+          background:#111; 
           padding:20px; 
           border-radius:5px;
         }
@@ -827,14 +875,18 @@ def signup():
           width:100%; 
           padding:10px; 
           margin:10px 0;
+          color:#000;
         }
         button {
           padding:10px; 
           width:100%; 
-          background:#111; 
+          background:#ff0066; 
           color:#fff; 
           border:none; 
           border-radius:5px;
+        }
+        button:hover {
+          background:#ff3399;
         }
       </style>
     </head>
@@ -842,14 +894,14 @@ def signup():
       {%% include 'sidebar' %%}
       <div class="main-content">
         <div class="signup-form">
-          <h2>Sign Up</h2>
+          <h2 style="margin-top:0;">Sign Up</h2>
           <form method="POST">
             <input type="text" name="username" placeholder="Username" required>
             <input type="text" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Sign Up</button>
           </form>
-          <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
+          <p>Already have an account? <a href="{{ url_for('login') }}" style="color:#ff0066;">Login</a></p>
         </div>
       </div>
     </body>
@@ -858,6 +910,7 @@ def signup():
     signup_form = signup_form.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(signup_form)
 
+# ------------------ LOGOUT ------------------
 @app.route('/logout')
 @login_required
 def logout():
@@ -865,5 +918,6 @@ def logout():
     flash("Logged out successfully!", "info")
     return redirect(url_for('home'))
 
+# Run the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
