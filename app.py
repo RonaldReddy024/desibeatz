@@ -121,20 +121,16 @@ sidebar_template = """
 </div>
 <style>
   @import url('https://fonts.cdnfonts.com/css/proxima-nova-2');
-
   body {
     font-family: 'Proxima Nova', Arial, sans-serif;
-    margin: 0;
-    padding: 0;
+    margin: 0; padding: 0;
     background-color: #000;
     color: #fff;
   }
   .sidebar {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 220px;
-    height: 100vh;
+    top: 0; left: 0;
+    width: 220px; height: 100vh;
     background-color: #000;
     padding-top: 20px;
     z-index: 999;
@@ -410,9 +406,9 @@ def upload():
       <title>Upload Video</title>
       <style>
         .main-content {
-          margin-left:220px;
-          padding:20px;
-          color:#fff;
+          margin-left: 220px;
+          padding: 20px;
+          color: #fff;
         }
         .upload-form {
           max-width: 400px;
@@ -422,22 +418,22 @@ def upload():
           border-radius: 5px;
         }
         input, textarea {
-          width:100%;
-          padding:10px;
-          margin:10px 0;
-          color:#000;
+          width: 100%;
+          padding: 10px;
+          margin: 10px 0;
+          color: #000;
         }
         button {
-          padding:10px;
-          width:100%;
-          background:#ff0066;
-          color:#fff;
-          border:none;
-          border-radius:5px;
-          cursor:pointer;
+          padding: 10px;
+          width: 100%;
+          background: #ff0066;
+          color: #fff;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
         }
         button:hover {
-          background:#ff3399;
+          background: #ff3399;
         }
       </style>
     </head>
@@ -459,7 +455,7 @@ def upload():
     upload_html = upload_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(upload_html)
 
-# ----- LIVESTREAM (Protected: requires login) -----
+# ----- LIVESTREAM (Exact TikTok-style copy) -----
 @app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
@@ -479,71 +475,180 @@ def livestream():
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>Livestream</title>
+      <title>Live</title>
       <style>
-        .main-content {
-          margin-left:220px;
-          padding:20px;
-          color:#fff;
-          text-align:center;
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: 'Proxima Nova', Arial, sans-serif;
+          background: #fff;
+          color: #000;
         }
-        video {
-          width:50%;
-          margin-top:20px;
-          background:#000;
+        .main-container {
+          margin-left: 220px; /* leave space for sidebar */
+          display: flex;
+          min-height: 100vh;
         }
-        input {
-          padding:10px;
-          margin:10px 0;
-          width:50%;
-          color:#000;
+        /* Center column with livestream video and controls */
+        .live-center {
+          flex: 1;
+          padding: 20px;
+          background: #fff;
         }
-        button {
-          padding:10px 20px;
-          background:#ff0066;
-          color:#fff;
-          border:none;
-          border-radius:5px;
-          cursor:pointer;
+        .live-center h2 {
+          text-align: left;
+          margin-top: 0;
         }
-        button:hover {
-          background:#ff3399;
+        .live-form {
+          margin-bottom: 20px;
+          text-align: left;
+        }
+        .live-form input[type="text"] {
+          padding: 10px;
+          margin-bottom: 10px;
+          width: 100%;
+          max-width: 300px;
+        }
+        .live-buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 10px;
+        }
+        .live-buttons button {
+          padding: 10px 20px;
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .live-buttons button:hover {
+          background: #ff527c;
+        }
+        .live-video-container {
+          width: 100%;
+          max-width: 700px;
+          margin: 0 auto;
+          background: #000;
+          position: relative;
+        }
+        .live-video-container video {
+          width: 100%;
+          height: auto;
+          background: #000;
+        }
+        /* Right column with chat box / log in prompt */
+        .live-right {
+          width: 320px;
+          background: #f8f8f8;
+          border-left: 1px solid #ccc;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+        .login-box {
+          background: #fff;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          padding: 20px;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .login-box h3 {
+          margin: 0 0 10px 0;
+          font-size: 1.1em;
+        }
+        .login-button {
+          padding: 10px 20px;
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .login-button:hover {
+          background: #ff527c;
+        }
+        .comment-feed {
+          flex: 1;
+          overflow-y: auto;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          padding: 10px;
+          background: #fff;
+        }
+        .comment-item {
+          margin-bottom: 10px;
+          font-size: 0.9em;
+          line-height: 1.4em;
+        }
+        .right-footer {
+          margin-top: 20px;
+          text-align: center;
+          font-size: 0.85em;
+          color: #999;
         }
       </style>
     </head>
     <body>
       {%% include 'sidebar' %%}
-      <div class="main-content">
-        <h2>Go Live</h2>
-        <form method="POST">
-          <input type="text" name="title" placeholder="Livestream Title" required><br>
-          <button id="startBtn" type="button">Start Livestream Preview</button>
-          <button type="submit" style="margin-left:10px;">Save Livestream</button>
-        </form>
-        <div>
-          <video id="liveVideo" autoplay muted></video>
+      <div class="main-container">
+        <!-- Center Column -->
+        <div class="live-center">
+          <h2>Live</h2>
+          <div class="live-form">
+            <form id="liveForm" method="POST" style="margin-bottom:0;">
+              <input type="text" name="title" placeholder="Livestream Title" required>
+              <div class="live-buttons">
+                <button type="button" id="startBtn">Start Livestream Preview</button>
+                <button type="submit">Save Livestream</button>
+              </div>
+            </form>
+          </div>
+          <div class="live-video-container">
+            <video id="liveVideo" autoplay muted></video>
+          </div>
         </div>
-        <script>
-          const startBtn = document.getElementById('startBtn');
-          const liveVideo = document.getElementById('liveVideo');
-          startBtn.addEventListener('click', async () => {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-              try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
-                liveVideo.srcObject = stream;
-                startBtn.disabled = true;
-                startBtn.innerText = "Livestreaming...";
-              } catch (error) {
-                alert("Error accessing camera/microphone: " + error);
-              }
-            } else {
-              alert("getUserMedia not supported in this browser.");
-            }
-          });
-        </script>
-        <br>
-        <a href="{{ url_for('home') }}" style="color:#fff; text-decoration:none;">Back to Home</a>
+        <!-- Right Column -->
+        <div class="live-right">
+          <div>
+            <div class="login-box">
+              <h3>Log in for full experience</h3>
+              <p>Log in to follow creators, like videos, and view comments.</p>
+              <button class="login-button" onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
+            </div>
+            <div class="comment-feed" id="chatFeed">
+              <div class="comment-item"><strong>User1:</strong> This is so cool!</div>
+              <div class="comment-item"><strong>User2:</strong> Wow, amazing stream</div>
+              <div class="comment-item"><strong>User3:</strong> Hello from NYC</div>
+            </div>
+          </div>
+          <div class="right-footer">
+            © 2023 Desibeatz
+          </div>
+        </div>
       </div>
+      <script>
+        const startBtn = document.getElementById('startBtn');
+        const liveVideo = document.getElementById('liveVideo');
+        startBtn.addEventListener('click', async () => {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+              liveVideo.srcObject = stream;
+              startBtn.disabled = true;
+              startBtn.innerText = "Livestreaming...";
+            } catch (error) {
+              alert("Error accessing camera/microphone: " + error);
+            }
+          } else {
+            alert("getUserMedia not supported in this browser.");
+          }
+        });
+      </script>
     </body>
     </html>
     """
@@ -596,12 +701,9 @@ def profile():
         return redirect(url_for('profile'))
 
     user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
-
-    # Use placeholder stats matching the TikTok screenshot
     following_count = 72
     followers_count = "58.3M"
     likes_count = "631.9M"
-
     profile_html = """
     <!DOCTYPE html>
     <html lang="en">
@@ -805,7 +907,6 @@ def profile():
 # ----- PUBLIC PROFILE (by username) -----
 @app.route('/<username>')
 def public_profile(username):
-    # Reserved route names to avoid conflict
     reserved = {'for you', 'explore', 'following', 'upload', 'livestream', 'profile', 'login', 'signup', 'logout', 'uploads'}
     if username.lower() in reserved:
         abort(404)
@@ -962,9 +1063,7 @@ def public_profile(username):
               <p class="video-timestamp">{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
             </div>
           {% else %}
-            <p style="grid-column:1/-1; text-align:center; color:#666;">
-              No videos uploaded yet.
-            </p>
+            <p style="grid-column: 1 / -1; text-align: center; color: #666;">No videos uploaded yet.</p>
           {% endfor %}
         </div>
       </div>
@@ -999,33 +1098,33 @@ def login_route():
       <title>Login</title>
       <style>
         .main-content {
-          margin-left:220px;
-          padding:20px;
-          color:#fff;
+          margin-left: 220px;
+          padding: 20px;
+          color: #fff;
         }
         .login-form {
-          max-width:400px;
-          margin:50px auto;
-          background:#111;
-          padding:20px;
-          border-radius:5px;
+          max-width: 400px;
+          margin: 50px auto;
+          background: #111;
+          padding: 20px;
+          border-radius: 5px;
         }
         input {
-          width:100%;
-          padding:10px;
-          margin:10px 0;
-          color:#000;
+          width: 100%;
+          padding: 10px;
+          margin: 10px 0;
+          color: #000;
         }
         button {
-          padding:10px;
-          width:100%;
-          background:#ff0066;
-          color:#fff;
-          border:none;
-          border-radius:5px;
+          padding: 10px;
+          width: 100%;
+          background: #ff0066;
+          color: #fff;
+          border: none;
+          border-radius: 5px;
         }
         button:hover {
-          background:#ff3399;
+          background: #ff3399;
         }
       </style>
     </head>
@@ -1076,33 +1175,33 @@ def signup_route():
       <title>Sign Up</title>
       <style>
         .main-content {
-          margin-left:220px;
-          padding:20px;
-          color:#fff;
+          margin-left: 220px;
+          padding: 20px;
+          color: #fff;
         }
         .signup-form {
-          max-width:400px;
-          margin:50px auto;
-          background:#111;
-          padding:20px;
-          border-radius:5px;
+          max-width: 400px;
+          margin: 50px auto;
+          background: #111;
+          padding: 20px;
+          border-radius: 5px;
         }
         input {
-          width:100%;
-          padding:10px;
-          margin:10px 0;
-          color:#000;
+          width: 100%;
+          padding: 10px;
+          margin: 10px 0;
+          color: #000;
         }
         button {
-          padding:10px;
-          width:100%;
-          background:#ff0066;
-          color:#fff;
-          border:none;
-          border-radius:5px;
+          padding: 10px;
+          width: 100%;
+          background: #ff0066;
+          color: #fff;
+          border: none;
+          border-radius: 5px;
         }
         button:hover {
-          background:#ff3399;
+          background: #ff3399;
         }
       </style>
     </head>
