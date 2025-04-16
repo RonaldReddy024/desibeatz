@@ -26,7 +26,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# --- M2M association tables ---
+# Many-to-many association tables
 followers = db.Table('followers',
     db.Column('follower_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('followed_id', db.Integer, db.ForeignKey('user.id'))
@@ -42,7 +42,7 @@ bookmarks_table = db.Table('bookmarks',
     db.Column('video_id', db.Integer, db.ForeignKey('video.id'))
 )
 
-# --- Models ---
+# Models
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), nullable=False)
@@ -50,7 +50,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128), nullable=False)
     bio = db.Column(db.Text, default='')
     profile_picture = db.Column(db.String(120), default='default_profile.png')
-    # Relationship: one user -> many videos
+    # One user can have many videos
     videos = db.relationship('Video', backref='uploader', lazy=True)
     # Self-referential followers relationship
     followers = db.relationship(
@@ -59,7 +59,6 @@ class User(UserMixin, db.Model):
         secondaryjoin=(followers.c.follower_id == id),
         backref=db.backref('following', lazy='dynamic'), lazy='dynamic'
     )
-    # Relationship for comments
     comments = db.relationship('Comment', backref='author', lazy=True)
 
     @property
@@ -95,7 +94,7 @@ class Comment(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Create tables
+# Create database tables
 with app.app_context():
     db.create_all()
 
@@ -104,7 +103,7 @@ with app.app_context():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# ----------- SIDEBAR -----------
+# ----------------- SIDEBAR -----------------
 sidebar_template = """
 <div class="sidebar">
   <div class="sidebar-header">
@@ -126,14 +125,13 @@ sidebar_template = """
   </ul>
 </div>
 <style>
-  /* Use Proxima Nova from a third-party CDN or your own hosting */
   @import url('https://fonts.cdnfonts.com/css/proxima-nova-2');
 
   body {
     font-family: 'Proxima Nova', Arial, sans-serif;
     margin: 0; padding: 0;
-    background-color: #000; /* For better contrast, or remove if you prefer the GIF only */
-    color: #fff; /* You can keep text white for contrast */
+    background-color: #000;
+    color: #fff;
   }
   .sidebar {
     position: fixed;
@@ -168,12 +166,9 @@ sidebar_template = """
 """
 
 # ------------------ HOME (FOR YOU) PAGE ------------------
-# Large, vertically stacked videos from the database
 @app.route('/')
 def home():
-    # Get all videos, newest first
     videos = Video.query.order_by(Video.timestamp.desc()).all()
-    # We’ll display them in a vertical feed with no white borders
     home_html = """
     <!DOCTYPE html>
     <html lang="en">
@@ -189,12 +184,11 @@ def home():
         .main-content {
           margin-left: 220px;
           padding: 20px;
-          /* We want a scrolling feed of large videos */
         }
         .welcome-message {
           text-align: center;
           background: rgba(255, 255, 255, 0.2);
-          color: #000; /* black text on translucent white */
+          color: #000;
           padding: 20px;
           border-radius: 10px;
           margin: 40px auto;
@@ -202,22 +196,21 @@ def home():
           font-size: 2em;
           font-weight: 600;
         }
-        /* Large vertical feed */
         .video-feed {
           display: flex;
           flex-direction: column;
-          align-items: center; /* center the videos horizontally */
-          gap: 40px; /* space between videos */
+          align-items: center;
+          gap: 40px;
           margin-top: 30px;
         }
         .video-card {
-          width: 400px; /* or 500px if you want bigger */
+          width: 400px;
         }
         .video-card video {
           width: 100%;
           height: auto;
           display: block;
-          border: none; /* remove any border */
+          border: none;
           background: #000;
         }
         .video-info {
@@ -281,7 +274,7 @@ def explore():
           margin: 20px;
           display: inline-block;
           vertical-align: top;
-          width: 320px; /* make them narrower, no white border */
+          width: 320px;
         }
         .video-container video {
           width: 100%;
@@ -361,7 +354,7 @@ def explore():
     explore_page = explore_page.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(explore_page, videos=videos)
 
-# ------------------ FOLLOWING (Placeholder) ------------------
+# ------------------ FOLLOWING ------------------
 @app.route('/following')
 @login_required
 def following():
@@ -414,7 +407,6 @@ def upload():
         db.session.add(new_video)
         db.session.commit()
         flash("Video uploaded successfully!", "success")
-        # Uploaded videos automatically appear on Explore (public) + user's profile
         return redirect(url_for('profile'))
 
     upload_page = """
@@ -589,13 +581,24 @@ def toggle_bookmark(video_id):
     db.session.commit()
     return redirect(request.referrer or url_for('explore'))
 
-# ------------------ PROFILE ------------------
+# ------------------ PROFILE (TikTok-Style) ------------------
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
+    """
+    A TikTok-style profile page that looks like your provided screenshot:
+      - Large profile picture on the left
+      - Display name, handle
+      - Stats row: Following, Followers, Likes
+      - Follow/Edit Profile button
+      - Bio text
+      - Grid of uploaded videos
+      - All on a white background, with a header (similar to the screenshot)
+    """
+
     if request.method == 'POST':
         bio = request.form.get('bio')
-        current_user.bio = bio
+        current_user.bio = bio or ""
         if 'profile_picture' in request.files:
             file = request.files['profile_picture']
             if file and file.filename != '':
@@ -611,150 +614,212 @@ def profile():
         flash("Profile updated successfully!", "success")
         return redirect(url_for('profile'))
 
-    user_videos = Video.query.filter_by(user_id=current_user.id, is_livestream=False).order_by(Video.timestamp.desc()).all()
-    user_livestreams = Video.query.filter_by(user_id=current_user.id, is_livestream=True).order_by(Video.timestamp.desc()).all()
-    followers_list = current_user.followers.all()
+    # PLACEHOLDER STATS to mimic your screenshot
+    following_count = 72
+    followers_count = "58.3M"
+    likes_count = "631.9M"
 
-    profile_page = """
+    # Gather the user's videos for the grid
+    user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
+
+    profile_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>Your Profile</title>
+      <title>{{ current_user.username }}'s Profile</title>
       <style>
+        body {
+          background:#f8f8f8; 
+          margin:0; 
+          padding:0; 
+          font-family: 'Proxima Nova', Arial, sans-serif;
+        }
         .main-content {
           margin-left:220px; 
-          padding:20px; 
-        }
-        .profile-container {
-          max-width:900px; 
-          margin:0 auto; 
-          background:#111; 
-          padding:20px; 
-          border-radius:5px;
-          color:#fff;
+          min-height:100vh; 
+          background:#fff; 
+          color:#000; 
+          padding:20px;
         }
         .profile-header {
           display:flex; 
-          align-items:center;
+          align-items:flex-start;
+          border-bottom:1px solid #ccc;
+          padding-bottom:20px;
+          margin-bottom:20px;
         }
-        .profile-header img {
-          width:120px; 
-          height:120px; 
+        .avatar {
+          width:100px; 
+          height:100px; 
           border-radius:50%; 
+          object-fit:cover; 
+          background:#000; 
           margin-right:20px;
-          background:#000;
         }
         .profile-info {
           flex:1;
         }
-        .section {
-          margin-top:30px;
+        .display-name {
+          font-size:1.4em; 
+          margin:0; 
+          font-weight:bold;
         }
-        .video-item {
-          margin-bottom:20px;
+        .username-handle {
+          margin-top:4px; 
+          color:#666; 
+          font-size:0.9em;
         }
-        video {
-          width:320px; 
-          height:auto; 
-          background:#000;
-          border:none;
-        }
-        .follower-item {
-          display:inline-block; 
-          text-align:center; 
-          margin:5px;
-        }
-        .follower-item img {
-          border-radius:50%;
-          width:50px;
-          height:50px;
-          background:#000;
-        }
-        input, textarea {
-          color:#000; 
-          width:100%; 
-          padding:10px; 
-          margin:10px 0;
-        }
-        button {
-          padding:10px; 
-          background:#ff0066; 
+        .follow-button {
+          background:#fe2c55; 
           color:#fff; 
           border:none; 
-          border-radius:5px;
+          padding:8px 20px; 
+          border-radius:4px; 
+          font-weight:bold; 
+          cursor:pointer; 
+          margin-top:10px;
+        }
+        .follow-button:hover {
+          background:#ff527c;
+        }
+        .stats-row {
+          display:flex; 
+          gap:30px; 
+          margin-top:10px;
+        }
+        .stat-item strong {
+          font-size:1.2em; 
+          display:block;
+          color:#000;
+        }
+        .bio-text {
+          margin-top:10px; 
+          color:#333;
+        }
+        .edit-profile-form {
+          margin-top:10px; 
+        }
+        .edit-profile-form textarea, 
+        .edit-profile-form input[type='file'] {
+          display:block; 
+          margin-top:6px;
+        }
+        .videos-grid {
+          display:grid; 
+          grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); 
+          gap:10px;
+        }
+        .video-card {
+          background:#f9f9f9; 
+          border:1px solid #eee; 
+          border-radius:4px; 
+          overflow:hidden; 
+          text-align:center; 
+          padding:10px;
+        }
+        .video-card video {
+          width:100%; 
+          border:none; 
+          background:#000; 
+          margin-bottom:8px;
+        }
+        .video-title {
+          font-weight:bold; 
+          color:#333; 
+          margin-bottom:5px; 
+          font-size:0.9em; 
+          overflow:hidden; 
+          white-space:nowrap; 
+          text-overflow:ellipsis;
+        }
+        .video-timestamp {
+          font-size:0.75em; 
+          color:#999;
+        }
+        /* If you want an "Upload" button in the top-right corner like in the screenshot: */
+        .upload-button {
+          position:absolute; 
+          right:20px; 
+          top:20px; 
+          background:#fe2c55; 
+          color:#fff; 
+          border:none; 
+          padding:8px 20px; 
+          border-radius:4px; 
+          font-weight:bold; 
           cursor:pointer;
         }
-        button:hover {
-          background:#ff3399;
+        .upload-button:hover {
+          background:#ff527c;
         }
       </style>
     </head>
     <body>
       {%% include 'sidebar' %%}
-      <div class="main-content">
-        <div class="profile-container">
-          <div class="profile-header">
-            <img src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Profile Picture">
-            <div class="profile-info">
-              <h2 style="margin:0;">{{ current_user.username }}</h2>
-              <p>{{ current_user.bio }}</p>
-              <form method="POST" enctype="multipart/form-data">
-                <textarea name="bio" rows="3" placeholder="Update your bio...">{{ current_user.bio }}</textarea><br>
-                <input type="file" name="profile_picture">
-                <button type="submit">Update Profile</button>
-              </form>
+      <div class="main-content" style="position:relative;">
+        <!-- If you want the upload button in the top-right corner: -->
+        <a href="{{ url_for('upload') }}" class="upload-button">Upload</a>
+        
+        <div class="profile-header">
+          <img class="avatar" src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Avatar">
+          <div class="profile-info">
+            <h1 class="display-name">{{ current_user.username }}</h1>
+            <div class="username-handle">@{{ current_user.username }}</div>
+            <div class="stats-row">
+              <div class="stat-item">
+                <strong>{{ following_count }}</strong> Following
+              </div>
+              <div class="stat-item">
+                <strong>{{ followers_count }}</strong> Followers
+              </div>
+              <div class="stat-item">
+                <strong>{{ likes_count }}</strong> Likes
+              </div>
             </div>
+            <button class="follow-button" disabled>Follow</button>
+            <div class="bio-text">{{ current_user.bio }}</div>
+            <!-- Edit profile form for current user -->
+            <form method="POST" enctype="multipart/form-data" class="edit-profile-form">
+              <label>Update Bio:</label>
+              <textarea name="bio" rows="2">{{ current_user.bio }}</textarea>
+              <label>Change Profile Picture:</label>
+              <input type="file" name="profile_picture">
+              <button type="submit" style="margin-top:6px;">Save</button>
+            </form>
           </div>
-          <div class="section">
-            <h3>Your Videos</h3>
-            {% for vid in user_videos %}
-              <div class="video-item">
-                <h4 style="margin-bottom:5px;">{{ vid.title }}</h4>
-                <p style="margin-bottom:5px;">Uploaded on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
-                <video controls>
-                  <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            {% else %}
-              <p>No videos uploaded yet.</p>
-            {% endfor %}
-          </div>
-          <div class="section">
-            <h3>Your Livestreams</h3>
-            {% for live in user_livestreams %}
-              <div class="video-item">
-                <h4 style="margin-bottom:5px;">{{ live.title }}</h4>
-                <p style="margin-bottom:5px;">Livestream on {{ live.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
-                <video controls>
-                  <source src="{{ url_for('uploaded_file', filename=live.filename) }}" type="video/mp4">
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            {% else %}
-              <p>No livestreams available.</p>
-            {% endfor %}
-          </div>
-          <div class="section">
-            <h3>Your Followers</h3>
-            {% for follower in followers_list %}
-              <div class="follower-item">
-                <img src="{{ url_for('uploaded_file', filename=follower.profile_picture) }}" alt="Follower">
-                <br>
-                <span>{{ follower.username }}</span>
-              </div>
-            {% else %}
-              <p>You have no followers yet.</p>
-            {% endfor %}
-          </div>
+        </div>
+        <div class="videos-grid">
+          {% for vid in user_videos %}
+            <div class="video-card">
+              <video controls>
+                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+              <p class="video-title">{{ vid.title }}</p>
+              <p class="video-timestamp">{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+          {% else %}
+            <p style="grid-column:1/-1; text-align:center; color:#666;">
+              No videos uploaded yet.
+            </p>
+          {% endfor %}
         </div>
       </div>
     </body>
     </html>
     """
-    profile_page = profile_page.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(profile_page, user_videos=user_videos, user_livestreams=user_livestreams, followers_list=followers_list)
+
+    profile_html = profile_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+
+    # Insert placeholder stats to replicate screenshot exactly
+    # (In your real app, replace with actual DB logic if desired.)
+    return render_template_string(
+        profile_html,
+        following_count=72,
+        followers_count="58.3M",
+        likes_count="631.9M"
+    )
 
 # ------------------ LOGIN ------------------
 @app.route('/login', methods=['GET', 'POST'])
@@ -918,6 +983,5 @@ def logout():
     flash("Logged out successfully!", "info")
     return redirect(url_for('home'))
 
-# Run the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
