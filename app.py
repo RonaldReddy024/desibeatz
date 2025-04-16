@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
+from datetime import datetime
+
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (LoginManager, UserMixin, login_user,
                          logout_user, login_required, current_user)
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 # Initialize Flask app with environment-based configuration.
 app = Flask(__name__)
@@ -15,9 +18,18 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'site.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Configure upload folder for videos.
+app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+
+# ------------------------------------------------------------------
+# Models
+# ------------------------------------------------------------------
 
 # User model for storing user details.
 class User(UserMixin, db.Model):
@@ -37,9 +49,22 @@ class User(UserMixin, db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+# Video model for storing video upload information.
+class Video(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)
+    uploader_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    # Relationship to associate a video with its uploader.
+    uploader = db.relationship('User', backref=db.backref('videos', lazy=True))
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+# ------------------------------------------------------------------
+# Routes
+# ------------------------------------------------------------------
 
 # Home page route.
 # If a user is logged in, render the logged‑in homepage (index1.html). Otherwise, render index.html.
@@ -108,26 +133,48 @@ def logout():
     flash("You have been logged out.", "info")
     return redirect(url_for('home'))
 
-# -------------------- Dummy Routes for Sidebar Links --------------------
+# -------------------- Functional Routes --------------------
 
+# Explore route for logged-in users.
 @app.route('/explore')
 @login_required
 def explore():
     # Replace with: return render_template('explore.html') if you have a template.
     return "<h1>Explore Page (Under Construction)</h1>"
 
-@app.route('/upload')
+# Upload route: Handles GET to display upload form and POST to process video upload.
+@app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
-    # Replace with: return render_template('upload.html') if you have a template.
-    return "<h1>Upload Page (Under Construction)</h1>"
+    if request.method == 'POST':
+        # Check if a video file part is in the request.
+        if 'video' not in request.files:
+            flash("No video file part.", "danger")
+            return redirect(request.url)
+        file = request.files['video']
+        if file.filename == "":
+            flash("No selected file.", "danger")
+            return redirect(request.url)
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)
+            # Save video info in the database.
+            new_video = Video(filename=filename, uploader_id=current_user.id)
+            db.session.add(new_video)
+            db.session.commit()
+            flash("Video uploaded successfully!", "success")
+            return redirect(url_for('home'))
+    return render_template('upload.html')
 
+# Profile route for logged-in users.
 @app.route('/profile')
 @login_required
 def profile():
     # Replace with: return render_template('profile.html') if you have a template.
     return "<h1>Profile Page for {} (Under Construction)</h1>".format(current_user.username)
 
+# Followers route for logged-in users.
 @app.route('/followers')
 @login_required
 def followers():
