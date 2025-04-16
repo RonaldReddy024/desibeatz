@@ -71,6 +71,7 @@ class User(UserMixin, db.Model):
 class Video(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
+    # Save filename in lower-case to help ensure proper type matching
     filename = db.Column(db.String(120), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -99,7 +100,7 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # ----- SIDEBAR (Displayed on all pages) -----
-# The color scheme here is updated to a dark, Indian-inspired palette with a saffron accent.
+# Indian-inspired colour scheme with our logo
 sidebar_template = """
 <div class="sidebar">
   <div class="sidebar-header">
@@ -124,18 +125,18 @@ sidebar_template = """
   @import url('https://fonts.cdnfonts.com/css/proxima-nova-2');
   body {
     font-family: 'Proxima Nova', Arial, sans-serif;
-    margin: 0; 
+    margin: 0;
     padding: 0;
     background-color: #000;
     color: #fff;
   }
   .sidebar {
     position: fixed;
-    top: 0; 
+    top: 0;
     left: 0;
-    width: 220px; 
+    width: 220px;
     height: 100vh;
-    background-color: #290012;  /* A deep dark pink/charcoal inspired by Indian aesthetics */
+    background-color: #290012;
     padding-top: 20px;
     z-index: 999;
   }
@@ -157,13 +158,13 @@ sidebar_template = """
     display: block;
   }
   .sidebar ul li a:hover {
-    background-color: #ff0066;  /* Bright pink accent */
+    background-color: #ff0066;
   }
 </style>
 """
 
 # ----- HOME (For You) Page -----
-# The welcome message is now left-aligned in white using the imported font.
+# Show all videos (including livestreams)
 @app.route('/')
 def home():
     videos = Video.query.order_by(Video.timestamp.desc()).all()
@@ -242,6 +243,7 @@ def home():
     return render_template_string(home_html, videos=videos)
 
 # ----- EXPLORE Page -----
+# Show all videos (including livestreams)
 @app.route('/explore', methods=['GET', 'POST'])
 def explore():
     if request.method == 'POST' and current_user.is_authenticated:
@@ -391,7 +393,8 @@ def upload():
         if file.filename == '':
             flash("No selected file", "danger")
             return redirect(request.url)
-        filename = secure_filename(file.filename)
+        # Convert filename to lower-case
+        filename = secure_filename(file.filename).lower()
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         new_video = Video(title=title, filename=filename, user_id=current_user.id, is_livestream=False)
         db.session.add(new_video)
@@ -456,6 +459,7 @@ def upload():
     return render_template_string(upload_html)
 
 # ----- LIVESTREAM (Exact TikTok-style copy with modifications) -----
+# Now the livestream page also shows livestream videos on home, explore and profile pages.
 @app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
@@ -609,8 +613,7 @@ def livestream():
               <input type="text" name="title" placeholder="Livestream Title" required>
               <div class="live-buttons">
                 <button type="button" id="startBtn">Start Livestream Preview</button>
-                <!-- Notice: We removed a separate 'Save Livestream' button.
-                     When the stream starts, the same button will toggle to "Stop Livestream". -->
+                <!-- The same button will toggle to "Stop Livestream" when active -->
               </div>
             </form>
           </div>
@@ -705,7 +708,7 @@ def profile():
         if 'profile_picture' in request.files:
             file = request.files['profile_picture']
             if file and file.filename != '':
-                filename = secure_filename(file.filename)
+                filename = secure_filename(file.filename).lower()
                 file_ext = filename.rsplit('.', 1)[1].lower()
                 if file_ext in ALLOWED_IMAGE_EXTENSIONS:
                     file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
