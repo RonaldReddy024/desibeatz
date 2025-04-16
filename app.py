@@ -41,9 +41,13 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# Home route - dynamically show different HTML based on login state
 @app.route('/')
 def home():
+    """
+    HOME ROUTE
+    1. If user is logged in, show the sidebar with pink/black styling.
+    2. If user is not logged in, show the 'welcome' splash with the same background.
+    """
     if current_user.is_authenticated:
         logged_in_html = """
         <!DOCTYPE html>
@@ -52,28 +56,90 @@ def home():
             <meta charset="UTF-8">
             <title>Welcome, {{ current_user.username }}</title>
             <style>
-              body {
-                font-family: Arial, sans-serif;
-                background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
-                background-size: cover;
-                margin: 0;
-              }
-              .navbar { background: #111; padding: 10px; }
-              .navbar a { color: white; margin-right: 15px; text-decoration: none; }
-              .content { padding: 20px; background: rgba(255, 255, 255, 0.9); margin: 20px; }
+                body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: Arial, sans-serif;
+                    /* Keep the same background image */
+                    background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
+                    background-size: cover;
+                }
+                .sidebar {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 220px;
+                    height: 100vh;
+                    background-color: #000; /* black background */
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                }
+                .sidebar ul {
+                    list-style-type: none;
+                    margin: 0;
+                    padding: 0;
+                }
+                .sidebar li a {
+                    display: block;
+                    text-decoration: none;
+                    color: #fff;
+                    padding: 15px 20px;
+                    transition: background-color 0.3s;
+                }
+                .sidebar li a:hover {
+                    background-color: #ff0066; /* pink highlight on hover */
+                }
+                /* Optional heading or logo at the top of sidebar */
+                .sidebar .sidebar-header {
+                    color: #fff;
+                    text-align: center;
+                    padding: 20px;
+                    font-weight: bold;
+                }
+                .login-btn, .logout-btn {
+                    text-align: center;
+                    padding: 20px;
+                }
+                .login-btn a, .logout-btn a {
+                    text-decoration: none;
+                    color: #fff;
+                    background-color: #ff0066; /* pink button */
+                    padding: 10px 20px;
+                    border-radius: 4px;
+                }
+                /* Main content to the right of sidebar */
+                .main-content {
+                    margin-left: 220px; /* Same as sidebar width */
+                    padding: 20px;
+                    background: rgba(255, 255, 255, 0.9);
+                    min-height: 100vh;
+                }
             </style>
         </head>
         <body>
-            <div class="navbar">
-              <a href="{{ url_for('home') }}">Home</a>
-              <a href="{{ url_for('upload') }}">Upload Video</a>
-              <a href="{{ url_for('livestream') }}">Livestream</a>
-              <a href="{{ url_for('profile') }}">Profile</a>
-              <a href="{{ url_for('logout') }}">Logout</a>
+            <div class="sidebar">
+                <div>
+                    <div class="sidebar-header">
+                        <h2>App Logo</h2>
+                    </div>
+                    <ul>
+                        <!-- Example Sidebar Items -->
+                        <li><a href="{{ url_for('home') }}">For You</a></li>
+                        <li><a href="{{ url_for('home') }}">Explore</a></li>
+                        <li><a href="{{ url_for('home') }}">Following</a></li>
+                        <li><a href="{{ url_for('upload') }}">Upload</a></li>
+                        <li><a href="{{ url_for('livestream') }}">LIVE</a></li>
+                        <li><a href="{{ url_for('profile') }}">Profile</a></li>
+                    </ul>
+                </div>
+                <div class="logout-btn">
+                    <a href="{{ url_for('logout') }}">Logout</a>
+                </div>
             </div>
-            <div class="content">
-              <h1>Welcome, {{ current_user.username }}</h1>
-              <p>This is your personalized homepage where you can upload videos and go live.</p>
+            <div class="main-content">
+                <h1>Welcome, {{ current_user.username }}</h1>
+                <p>This is your personalized homepage where you can upload videos, go live, and more!</p>
             </div>
         </body>
         </html>
@@ -87,40 +153,42 @@ def home():
             <meta charset="UTF-8">
             <title>Welcome to Our Site</title>
             <style>
-              body {
-                font-family: Arial, sans-serif;
-                background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
-                background-size: cover;
-                margin: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: 100vh;
-              }
-              .login-container {
-                background: rgba(255,255,255,0.9);
-                padding: 30px;
-                border-radius: 10px;
-                text-align: center;
-              }
-              .login-container a {
-                margin: 0 10px;
-                text-decoration: none;
-                color: #007bff;
-              }
+                body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: Arial, sans-serif;
+                    /* Keep the same background image */
+                    background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
+                    background-size: cover;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100vh;
+                }
+                .login-container {
+                    background: rgba(255,255,255,0.9);
+                    padding: 30px;
+                    border-radius: 10px;
+                    text-align: center;
+                }
+                .login-container a {
+                    margin: 0 10px;
+                    text-decoration: none;
+                    color: #ff0066; /* Pink links */
+                    font-weight: bold;
+                }
             </style>
         </head>
         <body>
             <div class="login-container">
-              <h1>Welcome to Our Site!</h1>
-              <p>Please <a href="{{ url_for('login') }}">Login</a> or <a href="{{ url_for('signup') }}">Sign Up</a></p>
+                <h1>Welcome to Our Site!</h1>
+                <p>Please <a href="{{ url_for('login') }}">Login</a> or <a href="{{ url_for('signup') }}">Sign Up</a></p>
             </div>
         </body>
         </html>
         """
         return render_template_string(unlogged_html)
 
-# Login route using a simple inline HTML form
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -144,10 +212,42 @@ def login():
       <meta charset="UTF-8">
       <title>Login</title>
       <style>
-        body { font-family: Arial, sans-serif; background: #f2f2f2; }
-        .login-form { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 5px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; }
-        button { padding: 10px; width: 100%; background: #111; color: #fff; border: none; border-radius: 5px; }
+        body {
+          font-family: Arial, sans-serif;
+          background: #f2f2f2;
+          margin: 0; 
+          padding: 0;
+          display: flex; 
+          justify-content: center; 
+          align-items: center;
+          height: 100vh;
+        }
+        .login-form {
+          max-width: 400px;
+          width: 90%;
+          background: #fff;
+          padding: 20px;
+          border-radius: 5px;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        input {
+          width: 100%;
+          padding: 10px; 
+          margin: 10px 0; 
+          box-sizing: border-box;
+        }
+        button {
+          padding: 10px; 
+          width: 100%; 
+          background: #111; 
+          color: #fff; 
+          border: none; 
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        button:hover {
+          background: #444;
+        }
       </style>
     </head>
     <body>
@@ -165,7 +265,6 @@ def login():
     """
     return render_template_string(login_form)
 
-# Signup route using inline HTML form
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -179,12 +278,13 @@ def signup():
             flash("Email already exists.", "warning")
             return redirect(url_for('signup'))
         new_user = User(username=username, email=email)
-        new_user.password = password  # Password is hashed by the setter.
+        new_user.password = password
         db.session.add(new_user)
         db.session.commit()
         flash("Account created! Welcome, {}.".format(username), "success")
         login_user(new_user)
         return redirect(url_for('home'))
+
     signup_form = """
     <!DOCTYPE html>
     <html lang="en">
@@ -192,10 +292,42 @@ def signup():
       <meta charset="UTF-8">
       <title>Sign Up</title>
       <style>
-        body { font-family: Arial, sans-serif; background: #f2f2f2; }
-        .signup-form { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 5px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; }
-        button { padding: 10px; width: 100%; background: #111; color: #fff; border: none; border-radius: 5px; }
+        body {
+          font-family: Arial, sans-serif;
+          background: #f2f2f2;
+          margin: 0; 
+          padding: 0;
+          display: flex; 
+          justify-content: center; 
+          align-items: center;
+          height: 100vh;
+        }
+        .signup-form {
+          max-width: 400px;
+          width: 90%;
+          background: #fff;
+          padding: 20px;
+          border-radius: 5px;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        input {
+          width: 100%;
+          padding: 10px; 
+          margin: 10px 0; 
+          box-sizing: border-box;
+        }
+        button {
+          padding: 10px; 
+          width: 100%; 
+          background: #111; 
+          color: #fff; 
+          border: none; 
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        button:hover {
+          background: #444;
+        }
       </style>
     </head>
     <body>
@@ -214,14 +346,14 @@ def signup():
     """
     return render_template_string(signup_form)
 
-# Dummy routes for upload, livestream, profile, etc.
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
     if request.method == 'POST':
-        # Dummy upload process. In a real app, process the file upload.
         flash("Video uploaded successfully!", "success")
         return redirect(url_for('home'))
+
+    # Same sidebar layout for consistency
     upload_page = """
     <!DOCTYPE html>
     <html lang="en">
@@ -229,19 +361,116 @@ def upload():
       <meta charset="UTF-8">
       <title>Upload Video</title>
       <style>
-        body { font-family: Arial, sans-serif; background: #f2f2f2; }
-        .upload-form { max-width: 400px; margin: 50px auto; background: #fff; padding: 20px; border-radius: 5px; }
-        input { width: 100%; padding: 10px; margin: 10px 0; }
-        button { padding: 10px; width: 100%; background: #111; color: #fff; border: none; border-radius: 5px; }
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: Arial, sans-serif;
+          background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
+          background-size: cover;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 220px;
+            height: 100vh;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+        .sidebar li a {
+            display: block;
+            text-decoration: none;
+            color: #fff;
+            padding: 15px 20px;
+            transition: background-color 0.3s;
+        }
+        .sidebar li a:hover {
+            background-color: #ff0066;
+        }
+        .sidebar .sidebar-header {
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            font-weight: bold;
+        }
+        .logout-btn {
+            text-align: center;
+            padding: 20px;
+        }
+        .logout-btn a {
+            text-decoration: none;
+            color: #fff;
+            background-color: #ff0066;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        .main-content {
+            margin-left: 220px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            min-height: 100vh;
+        }
+        .upload-form {
+          max-width: 400px;
+          margin: 50px auto;
+          background: #fff;
+          padding: 20px;
+          border-radius: 5px;
+        }
+        input {
+          width: 100%;
+          padding: 10px; 
+          margin: 10px 0; 
+          box-sizing: border-box;
+        }
+        button {
+          padding: 10px; 
+          width: 100%; 
+          background: #111; 
+          color: #fff; 
+          border: none; 
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        button:hover {
+          background: #444;
+        }
       </style>
     </head>
     <body>
-      <div class="upload-form">
+      <div class="sidebar">
+        <div>
+            <div class="sidebar-header">
+                <h2>App Logo</h2>
+            </div>
+            <ul>
+                <li><a href="{{ url_for('home') }}">For You</a></li>
+                <li><a href="{{ url_for('home') }}">Explore</a></li>
+                <li><a href="{{ url_for('home') }}">Following</a></li>
+                <li><a href="{{ url_for('upload') }}">Upload</a></li>
+                <li><a href="{{ url_for('livestream') }}">LIVE</a></li>
+                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+            </ul>
+        </div>
+        <div class="logout-btn">
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </div>
+      <div class="main-content">
         <h2>Upload Your Video</h2>
-        <form method="POST" enctype="multipart/form-data">
-          <input type="file" name="video" required>
-          <button type="submit">Upload</button>
-        </form>
+        <div class="upload-form">
+          <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="video" required>
+            <button type="submit">Upload</button>
+          </form>
+        </div>
       </div>
     </body>
     </html>
@@ -258,13 +487,89 @@ def livestream():
       <meta charset="UTF-8">
       <title>Livestream</title>
       <style>
-        body { font-family: Arial, sans-serif; background: #f2f2f2; text-align: center; padding-top: 50px; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
+            background-size: cover;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 220px;
+            height: 100vh;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+        .sidebar li a {
+            display: block;
+            text-decoration: none;
+            color: #fff;
+            padding: 15px 20px;
+            transition: background-color 0.3s;
+        }
+        .sidebar li a:hover {
+            background-color: #ff0066;
+        }
+        .sidebar .sidebar-header {
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            font-weight: bold;
+        }
+        .logout-btn {
+            text-align: center;
+            padding: 20px;
+        }
+        .logout-btn a {
+            text-decoration: none;
+            color: #fff;
+            background-color: #ff0066;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        .main-content {
+            margin-left: 220px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            min-height: 100vh;
+            text-align: center;
+        }
       </style>
     </head>
     <body>
-      <h2>Livestream</h2>
-      <p>Livestream functionality is under construction.</p>
-      <a href="{{ url_for('home') }}">Back to Home</a>
+      <div class="sidebar">
+        <div>
+            <div class="sidebar-header">
+                <h2>App Logo</h2>
+            </div>
+            <ul>
+                <li><a href="{{ url_for('home') }}">For You</a></li>
+                <li><a href="{{ url_for('home') }}">Explore</a></li>
+                <li><a href="{{ url_for('home') }}">Following</a></li>
+                <li><a href="{{ url_for('upload') }}">Upload</a></li>
+                <li><a href="{{ url_for('livestream') }}">LIVE</a></li>
+                <li><a href="{{ url_for('profile') }}">Profile</a></li>
+            </ul>
+        </div>
+        <div class="logout-btn">
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </div>
+      <div class="main-content">
+        <h2>Livestream</h2>
+        <p>Livestream functionality is under construction.</p>
+        <a href="{{ url_for('home') }}">Back to Home</a>
+      </div>
     </body>
     </html>
     """
@@ -280,13 +585,89 @@ def profile():
       <meta charset="UTF-8">
       <title>Your Profile</title>
       <style>
-        body { font-family: Arial, sans-serif; background: #f2f2f2; text-align: center; padding-top: 50px; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
+            background-size: cover;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 220px;
+            height: 100vh;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .sidebar ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+        }
+        .sidebar li a {
+            display: block;
+            text-decoration: none;
+            color: #fff;
+            padding: 15px 20px;
+            transition: background-color 0.3s;
+        }
+        .sidebar li a:hover {
+            background-color: #ff0066;
+        }
+        .sidebar .sidebar-header {
+            color: #fff;
+            text-align: center;
+            padding: 20px;
+            font-weight: bold;
+        }
+        .logout-btn {
+            text-align: center;
+            padding: 20px;
+        }
+        .logout-btn a {
+            text-decoration: none;
+            color: #fff;
+            background-color: #ff0066;
+            padding: 10px 20px;
+            border-radius: 4px;
+        }
+        .main-content {
+            margin-left: 220px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            min-height: 100vh;
+            text-align: center;
+        }
       </style>
     </head>
     <body>
-      <h2>Profile for {{ current_user.username }}</h2>
-      <p>Profile functionality is under construction.</p>
-      <a href="{{ url_for('home') }}">Back to Home</a>
+      <div class="sidebar">
+        <div>
+            <div class="sidebar-header">
+                <h2>App Logo</h2>
+            </div>
+            <ul>
+                <li><a href="{{ url_for('home') }}">For You</a></li>
+                <li><a href="{{ url_for('home') }}">Explore</a></li>
+                <li><a href="{{ url_for('home') }}">Following</a></li>
+                <li><a href="{{ url_for('upload') }}">Upload</a></li>
+                <li><a href="{{ url_for('livestream') }}">LIVE</a></li>
+                <li><a href="#">Profile</a></li>
+            </ul>
+        </div>
+        <div class="logout-btn">
+            <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </div>
+      <div class="main-content">
+        <h2>Profile for {{ current_user.username }}</h2>
+        <p>Profile functionality is under construction.</p>
+        <a href="{{ url_for('home') }}">Back to Home</a>
+      </div>
     </body>
     </html>
     """
