@@ -12,7 +12,7 @@
       font-family: Arial, sans-serif;
       height: 100%;
       display: flex;
-      background: url("{{ url_for('static', filename='background.gif') }}") no-repeat center center fixed;
+      background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
       background-size: cover;
     }
     .sidebar {
@@ -101,13 +101,13 @@
 <body>
   <div class="sidebar">
     <div class="logo">
-      <img src="../static/images/desibeatz_logo.png" alt="DesiBeats Logo">
+      <img src="{{ url_for('static', filename='images/desibeatz_logo.png') }}" alt="DesiBeats Logo">
     </div>
     <div class="search-container">
       <input type="search" placeholder="Search">
     </div>
     <nav>
-      <a href="/index1.html" class="active"><i class="fas fa-home"></i> For You</a>
+      <a href="{{ url_for('home') }}" class="active"><i class="fas fa-home"></i> For You</a>
       <a href="/explore1.html"><i class="fas fa-compass"></i> Explore</a>
       <a href="/following.html"><i class="fas fa-users"></i> Following</a>
       <a href="/upload1.html"><i class="fas fa-plus-square"></i> Upload</a>
@@ -115,7 +115,7 @@
       <a href="/profile1.html"><i class="fas fa-user"></i> Profile</a>
       <a href="/more.html"><i class="fas fa-ellipsis-h"></i> More</a>
     </nav>
-    <button class="logout-button" onclick="location.href='/logout'">Log out</button>
+    <button class="logout-button" onclick="location.href='{{ url_for('logout') }}'">Log out</button>
     <div class="footer">
       <p>Company</p>
       <p>Program</p>
