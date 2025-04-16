@@ -24,7 +24,7 @@ ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'avi'}
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+login_manager.login_view = 'login_route'
 
 # Many-to-many association tables
 followers = db.Table('followers',
@@ -42,10 +42,10 @@ bookmarks_table = db.Table('bookmarks',
     db.Column('video_id', db.Integer, db.ForeignKey('video.id'))
 )
 
-# --- Models ---
+# ----- Models -----
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), nullable=False)  # used for profile IDs
+    username = db.Column(db.String(20), nullable=False)  # also used for profile URLs
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     bio = db.Column(db.Text, default='')
@@ -62,11 +62,9 @@ class User(UserMixin, db.Model):
     @property
     def password(self):
         raise AttributeError("Password is not readable.")
-    
     @password.setter
     def password(self, password):
         self.password_hash = generate_password_hash(password)
-    
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -95,12 +93,12 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# Serve uploaded files
+# ----- Serve uploaded files -----
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# ------------------ SIDEBAR (Displayed on all pages) ------------------
+# ----- SIDEBAR (Displayed on all pages) -----
 sidebar_template = """
 <div class="sidebar">
   <div class="sidebar-header">
@@ -126,14 +124,17 @@ sidebar_template = """
 
   body {
     font-family: 'Proxima Nova', Arial, sans-serif;
-    margin: 0; padding: 0;
+    margin: 0;
+    padding: 0;
     background-color: #000;
     color: #fff;
   }
   .sidebar {
     position: fixed;
-    top: 0; left: 0;
-    width: 220px; height: 100vh;
+    top: 0;
+    left: 0;
+    width: 220px;
+    height: 100vh;
     background-color: #000;
     padding-top: 20px;
     z-index: 999;
@@ -143,7 +144,7 @@ sidebar_template = """
     margin-bottom: 20px;
   }
   .sidebar ul {
-    list-style-type: none;
+    list-style: none;
     padding: 0;
   }
   .sidebar ul li {
@@ -152,8 +153,8 @@ sidebar_template = """
   .sidebar ul li a {
     color: #fff;
     text-decoration: none;
-    display: block;
     padding: 10px 20px;
+    display: block;
   }
   .sidebar ul li a:hover {
     background-color: #ff0066;
@@ -161,7 +162,7 @@ sidebar_template = """
 </style>
 """
 
-# ------------------ HOME (FOR YOU) PAGE ------------------
+# ----- HOME (For You) Page -----
 @app.route('/')
 def home():
     videos = Video.query.order_by(Video.timestamp.desc()).all()
@@ -220,8 +221,8 @@ def home():
       {%% include 'sidebar' %%}
       <div class="main-content">
         <div class="welcome-message">
-          Welcome to Desibeatz
-          <br><span style="font-size:0.6em;">Your personalized video</span>
+          Welcome to Desibeatz<br>
+          <span style="font-size:0.6em;">Your personalized video</span>
         </div>
         <div class="video-feed">
           {% for vid in videos %}
@@ -244,7 +245,7 @@ def home():
     home_html = home_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(home_html, videos=videos)
 
-# ------------------ EXPLORE PAGE ------------------
+# ----- EXPLORE Page -----
 @app.route('/explore', methods=['GET', 'POST'])
 def explore():
     if request.method == 'POST' and current_user.is_authenticated:
@@ -257,7 +258,7 @@ def explore():
             flash("Comment added!", "success")
             return redirect(url_for('explore'))
     videos = Video.query.order_by(Video.timestamp.desc()).all()
-    explore_page = """
+    explore_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -316,12 +317,8 @@ def explore():
             <p style="margin:5px 0;"><strong>{{ vid.title }}</strong></p>
             <p style="font-size:0.85em;">Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
             <div class="actions">
-              <a href="{{ url_for('toggle_like', video_id=vid.id) }}">
-                <button>Like ({{ vid.liked_by|length }})</button>
-              </a>
-              <a href="{{ url_for('toggle_bookmark', video_id=vid.id) }}">
-                <button>Bookmark ({{ vid.bookmarked_by|length }})</button>
-              </a>
+              <a href="{{ url_for('toggle_like', video_id=vid.id) }}"><button>Like ({{ vid.liked_by|length }})</button></a>
+              <a href="{{ url_for('toggle_bookmark', video_id=vid.id) }}"><button>Bookmark ({{ vid.bookmarked_by|length }})</button></a>
               <button onclick="alert('Share Link: {{ url_for('uploaded_file', filename=vid.filename, _external=True) }}')">Share</button>
             </div>
             <div class="comment-section">
@@ -348,14 +345,14 @@ def explore():
     </body>
     </html>
     """
-    explore_page = explore_page.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(explore_page, videos=videos)
+    explore_html = explore_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+    return render_template_string(explore_html, videos=videos)
 
-# ------------------ FOLLOWING (Placeholder) ------------------
+# ----- FOLLOWING (Placeholder) Page -----
 @app.route('/following')
 @login_required
 def following():
-    following_page = """
+    following_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -379,10 +376,10 @@ def following():
     </body>
     </html>
     """
-    following_page = following_page.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(following_page)
+    following_html = following_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+    return render_template_string(following_html)
 
-# ------------------ UPLOAD ------------------
+# ----- UPLOAD (Protected: requires login) -----
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
@@ -405,7 +402,7 @@ def upload():
         db.session.commit()
         flash("Video uploaded successfully!", "success")
         return redirect(url_for('profile'))
-    upload_page = """
+    upload_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -413,29 +410,29 @@ def upload():
       <title>Upload Video</title>
       <style>
         .main-content {
-          margin-left:220px; 
+          margin-left:220px;
           padding:20px;
           color:#fff;
         }
         .upload-form {
-          max-width: 400px; 
-          margin: 50px auto; 
-          background: #222; 
-          padding: 20px; 
+          max-width: 400px;
+          margin: 50px auto;
+          background: #222;
+          padding: 20px;
           border-radius: 5px;
         }
         input, textarea {
-          width:100%; 
-          padding:10px; 
+          width:100%;
+          padding:10px;
           margin:10px 0;
           color:#000;
         }
         button {
-          padding:10px; 
-          width:100%; 
-          background:#ff0066; 
-          color:#fff; 
-          border:none; 
+          padding:10px;
+          width:100%;
+          background:#ff0066;
+          color:#fff;
+          border:none;
           border-radius:5px;
           cursor:pointer;
         }
@@ -459,10 +456,10 @@ def upload():
     </body>
     </html>
     """
-    upload_page = upload_page.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(upload_page)
+    upload_html = upload_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+    return render_template_string(upload_html)
 
-# ------------------ LIVESTREAM ------------------
+# ----- LIVESTREAM (Protected: requires login) -----
 @app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
@@ -477,7 +474,7 @@ def livestream():
         db.session.commit()
         flash("Livestream recorded successfully (simulation)!", "success")
         return redirect(url_for('profile'))
-    livestream_page = """
+    livestream_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -485,28 +482,28 @@ def livestream():
       <title>Livestream</title>
       <style>
         .main-content {
-          margin-left:220px; 
-          padding:20px; 
+          margin-left:220px;
+          padding:20px;
           color:#fff;
           text-align:center;
         }
         video {
-          width:50%; 
+          width:50%;
           margin-top:20px;
           background:#000;
         }
         input {
-          padding:10px; 
-          margin:10px 0; 
+          padding:10px;
+          margin:10px 0;
           width:50%;
           color:#000;
         }
         button {
-          padding:10px 20px; 
-          background:#ff0066; 
-          color:#fff; 
-          border:none; 
-          border-radius:5px; 
+          padding:10px 20px;
+          background:#ff0066;
+          color:#fff;
+          border:none;
+          border-radius:5px;
           cursor:pointer;
         }
         button:hover {
@@ -550,10 +547,10 @@ def livestream():
     </body>
     </html>
     """
-    livestream_page = livestream_page.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(livestream_page)
+    livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+    return render_template_string(livestream_html)
 
-# ------------------ LIKE & BOOKMARK ------------------
+# ----- LIKE & BOOKMARK -----
 @app.route('/like/<int:video_id>')
 @login_required
 def toggle_like(video_id):
@@ -576,22 +573,10 @@ def toggle_bookmark(video_id):
     db.session.commit()
     return redirect(request.referrer or url_for('explore'))
 
-# ------------------ PROFILE (Editable TikTok-Style) ------------------
+# ----- PROFILE (Editable TikTok-Style for Current User) -----
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    """
-    EXACT TikTok-style profile page with:
-      - White background main content
-      - Large avatar left
-      - Big display name + handle
-      - Stats row: 72 Following, 58.3M Followers, 631.9M Likes
-      - Pink "Edit Profile" or "Follow" button
-      - Bio text
-      - Grid of user videos below
-      - Upload button top right
-      - EXACT layout from your screenshot
-    """
     if request.method == 'POST':
         bio = request.form.get('bio')
         current_user.bio = bio or ""
@@ -610,13 +595,12 @@ def profile():
         flash("Profile updated successfully!", "success")
         return redirect(url_for('profile'))
 
-    # Fake stats for that exact screenshot
+    user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
+
+    # Use placeholder stats matching the TikTok screenshot
     following_count = 72
     followers_count = "58.3M"
     likes_count = "631.9M"
-
-    # Gather the user's videos
-    user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
 
     profile_html = """
     <!DOCTYPE html>
@@ -626,152 +610,149 @@ def profile():
       <title>{{ current_user.username }}'s Profile</title>
       <style>
         body {
-          background:#f8f8f8;
-          margin:0;
-          padding:0;
+          background: #f8f8f8;
+          margin: 0;
+          padding: 0;
           font-family: 'Proxima Nova', Arial, sans-serif;
         }
         .main-content {
-          margin-left:220px;
-          min-height:100vh;
-          background:#fff;
-          color:#000;
-          padding:20px;
-          position:relative;
+          margin-left: 220px;
+          min-height: 100vh;
+          background: #fff;
+          color: #000;
+          padding: 20px;
+          position: relative;
         }
         .profile-header {
-          display:flex;
-          align-items:center;
-          margin-bottom:20px;
-          border-bottom:1px solid #ccc;
-          padding-bottom:20px;
+          display: flex;
+          align-items: center;
+          margin-bottom: 20px;
+          border-bottom: 1px solid #ccc;
+          padding-bottom: 20px;
         }
         .avatar {
-          width:100px;
-          height:100px;
-          border-radius:50%;
-          object-fit:cover;
-          background:#000;
-          margin-right:20px;
+          width: 100px;
+          height: 100px;
+          border-radius: 50%;
+          object-fit: cover;
+          background: #000;
+          margin-right: 20px;
         }
         .profile-info {
-          flex:1;
+          flex: 1;
         }
         .display-name {
-          font-size:1.4em;
-          font-weight:bold;
-          margin:0;
+          font-size: 1.4em;
+          font-weight: bold;
+          margin: 0;
         }
         .username-handle {
-          color:#666;
-          font-size:0.9em;
-          margin-top:5px;
+          color: #666;
+          font-size: 0.9em;
+          margin-top: 5px;
         }
         .stats-row {
-          display:flex;
-          gap:25px;
-          margin-top:10px;
+          display: flex;
+          gap: 25px;
+          margin-top: 10px;
         }
         .stat-item strong {
-          display:block;
-          font-size:1.2em;
-          color:#000;
+          display: block;
+          font-size: 1.2em;
+          color: #000;
         }
         .follow-button {
-          background:#fe2c55;
-          color:#fff;
-          border:none;
-          padding:8px 20px;
-          border-radius:4px;
-          font-weight:bold;
-          cursor:pointer;
-          margin-top:10px;
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
+          margin-top: 10px;
         }
         .follow-button:hover {
-          background:#ff527c;
+          background: #ff527c;
         }
         .bio-text {
-          margin-top:10px;
-          color:#333;
-          font-size:0.9em;
+          margin-top: 10px;
+          color: #333;
+          font-size: 0.9em;
         }
         .edit-profile-form {
-          margin-top:10px;
+          margin-top: 10px;
         }
         .edit-profile-form label {
-          font-size:0.85em;
-          color:#333;
+          font-size: 0.85em;
+          color: #333;
         }
         .edit-profile-form textarea,
         .edit-profile-form input[type='file'] {
-          display:block;
-          margin-top:6px;
-          margin-bottom:10px;
-          padding:6px;
-          width:220px;
+          display: block;
+          margin-top: 6px;
+          margin-bottom: 10px;
+          padding: 6px;
+          width: 220px;
         }
         .videos-grid {
-          display:grid;
-          grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
-          gap:10px;
-          margin-top:20px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          gap: 10px;
+          margin-top: 20px;
         }
         .video-card {
-          background:#f9f9f9;
-          border:1px solid #eee;
-          border-radius:4px;
-          overflow:hidden;
-          text-align:center;
-          padding:10px;
+          background: #f9f9f9;
+          border: 1px solid #eee;
+          border-radius: 4px;
+          overflow: hidden;
+          text-align: center;
+          padding: 10px;
         }
         .video-card video {
-          width:100%;
-          border:none;
-          background:#000;
-          margin-bottom:8px;
+          width: 100%;
+          border: none;
+          background: #000;
+          margin-bottom: 8px;
         }
         .video-title {
-          font-weight:bold;
-          color:#333;
-          margin-bottom:5px;
-          font-size:0.9em;
-          overflow:hidden;
-          white-space:nowrap;
-          text-overflow:ellipsis;
+          font-weight: bold;
+          color: #333;
+          margin-bottom: 5px;
+          font-size: 0.9em;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
         }
         .video-timestamp {
-          font-size:0.75em;
-          color:#999;
+          font-size: 0.75em;
+          color: #999;
         }
         .upload-button {
-          position:absolute;
-          right:20px;
-          top:20px;
-          background:#fe2c55;
-          color:#fff;
-          border:none;
-          padding:8px 20px;
-          border-radius:4px;
-          font-weight:bold;
-          cursor:pointer;
+          position: absolute;
+          right: 20px;
+          top: 20px;
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
         }
         .upload-button:hover {
-          background:#ff527c;
+          background: #ff527c;
         }
       </style>
     </head>
     <body>
       {%% include 'sidebar' %%}
       <div class="main-content">
-        <!-- "Upload" button in top-right corner -->
         <a href="{{ url_for('upload') }}" class="upload-button">Upload</a>
-
         <div class="profile-header">
           <img class="avatar" src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Profile Picture">
           <div class="profile-info">
             <h2 class="display-name">{{ current_user.username }}</h2>
             <div class="username-handle">@{{ current_user.username }}</div>
-
             <div class="stats-row">
               <div class="stat-item">
                 <strong>{{ following_count }}</strong> Following
@@ -783,11 +764,8 @@ def profile():
                 <strong>{{ likes_count }}</strong> Likes
               </div>
             </div>
-
             <button class="follow-button" disabled>Edit Profile</button>
-
             <div class="bio-text">{{ current_user.bio }}</div>
-            <!-- Edit profile form -->
             <form method="POST" enctype="multipart/form-data" class="edit-profile-form">
               <label>Update Bio:</label>
               <textarea name="bio" rows="2">{{ current_user.bio }}</textarea>
@@ -797,8 +775,6 @@ def profile():
             </form>
           </div>
         </div>
-
-        <!-- Grid of videos -->
         <div class="videos-grid">
           {% for vid in user_videos %}
             <div class="video-card">
@@ -810,9 +786,7 @@ def profile():
               <p class="video-timestamp">{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
             </div>
           {% else %}
-            <p style="grid-column:1/-1; text-align:center; color:#666;">
-              No videos uploaded yet.
-            </p>
+            <p style="grid-column: 1 / -1; text-align: center; color: #666;">No videos uploaded yet.</p>
           {% endfor %}
         </div>
       </div>
@@ -828,10 +802,11 @@ def profile():
         user_videos=user_videos
     )
 
-# ------------------ PUBLIC PROFILE (by username) ------------------
+# ----- PUBLIC PROFILE (by username) -----
 @app.route('/<username>')
 def public_profile(username):
-    reserved = {'for you','explore','following','upload','livestream','profile','login','signup','logout','uploads'}
+    # Reserved route names to avoid conflict
+    reserved = {'for you', 'explore', 'following', 'upload', 'livestream', 'profile', 'login', 'signup', 'logout', 'uploads'}
     if username.lower() in reserved:
         abort(404)
     user = User.query.filter_by(username=username).first()
@@ -846,106 +821,106 @@ def public_profile(username):
       <title>{{ user.username }}'s Profile</title>
       <style>
         body {
-          background:#f8f8f8;
-          margin:0;
-          padding:0;
+          background: #f8f8f8;
+          margin: 0;
+          padding: 0;
           font-family: 'Proxima Nova', Arial, sans-serif;
         }
         .main-content {
-          margin-left:220px;
-          min-height:100vh;
-          background:#fff;
-          color:#000;
-          padding:20px;
+          margin-left: 220px;
+          min-height: 100vh;
+          background: #fff;
+          color: #000;
+          padding: 20px;
         }
         .profile-header {
-          display:flex;
-          align-items:flex-start;
-          border-bottom:1px solid #ccc;
-          padding-bottom:20px;
-          margin-bottom:20px;
+          display: flex;
+          align-items: flex-start;
+          border-bottom: 1px solid #ccc;
+          padding-bottom: 20px;
+          margin-bottom: 20px;
         }
         .avatar {
-          width:100px;
-          height:100px;
-          border-radius:50%;
-          object-fit:cover;
-          background:#000;
-          margin-right:20px;
+          width: 100px;
+          height: 100px;
+          border-radius: 50%;
+          object-fit: cover;
+          background: #000;
+          margin-right: 20px;
         }
         .profile-info {
-          flex:1;
+          flex: 1;
         }
         .display-name {
-          font-size:1.4em;
-          margin:0;
-          font-weight:bold;
+          font-size: 1.4em;
+          margin: 0;
+          font-weight: bold;
         }
         .username-handle {
-          margin-top:4px;
-          color:#666;
-          font-size:0.9em;
+          margin-top: 4px;
+          color: #666;
+          font-size: 0.9em;
         }
         .stats-row {
-          display:flex;
-          gap:25px;
-          margin-top:10px;
+          display: flex;
+          gap: 25px;
+          margin-top: 10px;
         }
         .stat-item strong {
-          font-size:1.2em;
-          display:block;
-          color:#000;
+          display: block;
+          font-size: 1.2em;
+          color: #000;
         }
         .follow-button {
-          background:#fe2c55;
-          color:#fff;
-          border:none;
-          padding:8px 20px;
-          border-radius:4px;
-          font-weight:bold;
-          cursor:pointer;
-          margin-top:10px;
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
+          margin-top: 10px;
         }
         .follow-button:hover {
-          background:#ff527c;
+          background: #ff527c;
         }
         .bio-text {
-          margin-top:10px;
-          color:#333;
-          font-size:0.9em;
+          margin-top: 10px;
+          color: #333;
+          font-size: 0.9em;
         }
         .videos-grid {
-          display:grid;
-          grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
-          gap:10px;
-          margin-top:20px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          gap: 10px;
+          margin-top: 20px;
         }
         .video-card {
-          background:#f9f9f9;
-          border:1px solid #eee;
-          border-radius:4px;
-          overflow:hidden;
-          text-align:center;
-          padding:10px;
+          background: #f9f9f9;
+          border: 1px solid #eee;
+          border-radius: 4px;
+          overflow: hidden;
+          text-align: center;
+          padding: 10px;
         }
         .video-card video {
-          width:100%;
-          border:none;
-          background:#000;
-          margin-bottom:8px;
+          width: 100%;
+          border: none;
+          background: #000;
+          margin-bottom: 8px;
         }
         .video-title {
-          font-weight:bold;
-          color:#333;
-          margin-bottom:5px;
-          font-size:0.9em;
-          overflow:hidden;
-          white-space:nowrap;
-          text-overflow:ellipsis;
+          font-weight: bold;
+          color: #333;
+          margin-bottom: 5px;
+          font-size: 0.9em;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
         }
         .video-timestamp {
-          font-size:0.75em;
-          color:#999;
+          font-size: 0.75em;
+          color: #999;
         }
       </style>
     </head>
@@ -999,7 +974,7 @@ def public_profile(username):
     public_profile_html = public_profile_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(public_profile_html, user=user, is_own_profile=is_own_profile)
 
-# ------------------ LOGIN ------------------
+# ----- LOGIN -----
 @app.route('/login', methods=['GET', 'POST'])
 def login_route():
     if request.method == 'POST':
@@ -1073,7 +1048,7 @@ def login_route():
     login_form = login_form.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(login_form)
 
-# ------------------ SIGNUP ------------------
+# ----- SIGNUP -----
 @app.route('/signup', methods=['GET', 'POST'])
 def signup_route():
     if request.method == 'POST':
@@ -1151,7 +1126,7 @@ def signup_route():
     signup_form = signup_form.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(signup_form)
 
-# ------------------ LOGOUT ------------------
+# ----- LOGOUT -----
 @app.route('/logout')
 @login_required
 def logout_route():
