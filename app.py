@@ -99,7 +99,7 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # ----- SIDEBAR (Displayed on all pages) -----
-# Updated with an Indian-inspired colour scheme and our logo
+# The color scheme here is updated to a dark, Indian-inspired palette with a saffron accent.
 sidebar_template = """
 <div class="sidebar">
   <div class="sidebar-header">
@@ -135,7 +135,7 @@ sidebar_template = """
     left: 0;
     width: 220px; 
     height: 100vh;
-    background-color: #1a1a1a;  /* a dark charcoal background */
+    background-color: #290012;  /* A deep dark pink/charcoal inspired by Indian aesthetics */
     padding-top: 20px;
     z-index: 999;
   }
@@ -155,16 +155,15 @@ sidebar_template = """
     text-decoration: none;
     padding: 10px 20px;
     display: block;
-    /* Use a bold accent colour for hover */
   }
   .sidebar ul li a:hover {
-    background-color: #ff9933;  /* saffron hover */
+    background-color: #ff0066;  /* Bright pink accent */
   }
 </style>
 """
 
 # ----- HOME (For You) Page -----
-# Changed the welcome message to be left aligned and centered vertically in the main content; the text is in white using our font.
+# The welcome message is now left-aligned in white using the imported font.
 @app.route('/')
 def home():
     videos = Video.query.order_by(Video.timestamp.desc()).all()
@@ -719,7 +718,6 @@ def profile():
         return redirect(url_for('profile'))
 
     user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
-    # Placeholder stats from our Indian‑inspired TikTok screenshot
     following_count = 72
     followers_count = "58.3M"
     likes_count = "631.9M"
