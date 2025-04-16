@@ -178,13 +178,14 @@ def home():
           margin-left: 220px;
           padding: 20px;
         }
+        /* Modified welcome message: left aligned and in white letters */
         .welcome-message {
-          text-align: center;
-          background: rgba(255, 255, 255, 0.2);
-          color: #000;
+          text-align: left;
+          background: transparent;
+          color: #fff;
           padding: 20px;
           border-radius: 10px;
-          margin: 40px auto;
+          margin: 40px 0;
           width: 60%;
           font-size: 2em;
           font-weight: 600;
@@ -209,7 +210,6 @@ def home():
         .video-info {
           margin-top: 5px;
           font-size: 0.9em;
-          color: #fff;
         }
       </style>
     </head>
@@ -538,7 +538,7 @@ def livestream():
           height: auto;
           background: #000;
         }
-        /* Right column with chat box / log in prompt */
+        /* Right column with chat box and header */
         .live-right {
           width: 320px;
           background: #f8f8f8;
@@ -572,6 +572,11 @@ def livestream():
         .login-button:hover {
           background: #ff527c;
         }
+        .chat-header {
+          font-weight: bold;
+          margin-bottom: 10px;
+          text-align: left;
+        }
         .comment-feed {
           flex: 1;
           overflow-y: auto;
@@ -604,7 +609,8 @@ def livestream():
               <input type="text" name="title" placeholder="Livestream Title" required>
               <div class="live-buttons">
                 <button type="button" id="startBtn">Start Livestream Preview</button>
-                <button type="submit">Save Livestream</button>
+                <!-- When livestream starts, the same button should change to 'Stop' -->
+                <!-- (You can further expand the JavaScript logic to toggle the button text and stop the stream) -->
               </div>
             </form>
           </div>
@@ -620,6 +626,7 @@ def livestream():
               <p>Log in to follow creators, like videos, and view comments.</p>
               <button class="login-button" onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
             </div>
+            <div class="chat-header">Chat</div>
             <div class="comment-feed" id="chatFeed">
               <div class="comment-item"><strong>User1:</strong> This is so cool!</div>
               <div class="comment-item"><strong>User2:</strong> Wow, amazing stream</div>
@@ -639,8 +646,10 @@ def livestream():
             try {
               const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
               liveVideo.srcObject = stream;
-              startBtn.disabled = true;
-              startBtn.innerText = "Livestreaming...";
+              // Change the button text to "Stop" once streaming starts
+              startBtn.disabled = false;
+              startBtn.innerText = "Stop Livestream";
+              // Here you can add logic to stop the stream when clicking again.
             } catch (error) {
               alert("Error accessing camera/microphone: " + error);
             }
