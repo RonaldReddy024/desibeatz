@@ -74,7 +74,7 @@ class User(UserMixin, db.Model):
 
 class Video(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(255), nullable=False)  # New video title
+    title = db.Column(db.String(255), nullable=False)  # Video title
     filename = db.Column(db.String(120), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -104,105 +104,127 @@ with app.app_context():
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
-# ----------------------- Navigation & Formatting ------------------------
-# Helper: common navbar HTML (with logo) to insert in pages.
-navbar_template = """
-<div class="navbar" style="background: #111; padding: 10px;">
-  <a href="{{ url_for('home') }}">
-    <img src="{{ url_for('static', filename='images/desibeatz_logo.png') }}" alt="Logo" style="height:40px; vertical-align: middle;">
-  </a>
-  <a href="{{ url_for('home') }}" style="color: white; margin-left: 15px; text-decoration: none;">Home</a>
-  <a href="{{ url_for('upload') }}" style="color: white; margin-left: 15px; text-decoration: none;">Upload Video</a>
-  <a href="{{ url_for('livestream') }}" style="color: white; margin-left: 15px; text-decoration: none;">Livestream</a>
-  {% if current_user.is_authenticated %}
-    <a href="{{ url_for('profile') }}" style="color: white; margin-left: 15px; text-decoration: none;">Profile</a>
-  {% endif %}
-  <a href="{{ url_for('explore') }}" style="color: white; margin-left: 15px; text-decoration: none;">Explore</a>
-  {% if current_user.is_authenticated %}
-    <a href="{{ url_for('logout') }}" style="color: white; margin-left: 15px; text-decoration: none;">Logout</a>
-  {% endif %}
+# --------------------- Sidebar Template (Always Visible) ----------------------
+# This sidebar will be visible on the homepage (and can be included elsewhere)
+sidebar_template = """
+<div class="sidebar">
+  <div class="sidebar-header">
+    <img src="{{ url_for('static', filename='images/desibeatz_logo.png') }}" alt="Logo" style="width:150px; display:block; margin: 0 auto;">
+  </div>
+  <ul>
+    <li><a href="{{ url_for('home') }}">Home</a></li>
+    <li><a href="{{ url_for('upload') }}">Upload Video</a></li>
+    <li><a href="{{ url_for('livestream') }}">Livestream</a></li>
+    {% if current_user.is_authenticated %}
+      <li><a href="{{ url_for('profile') }}">Profile</a></li>
+      <li><a href="{{ url_for('logout') }}">Logout</a></li>
+    {% else %}
+      <li><a href="{{ url_for('login') }}">Login</a></li>
+      <li><a href="{{ url_for('signup') }}">Sign Up</a></li>
+    {% endif %}
+    <li><a href="{{ url_for('explore') }}">Explore</a></li>
+  </ul>
 </div>
+<style>
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 220px;
+    height: 100vh;
+    background-color: #000;
+    color: #fff;
+    padding-top: 20px;
+  }
+  .sidebar .sidebar-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .sidebar ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  .sidebar ul li {
+    margin: 15px 0;
+  }
+  .sidebar ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+    display: block;
+    padding: 10px 20px;
+  }
+  .sidebar ul li a:hover {
+    background-color: #ff0066;
+  }
+</style>
 """
 
-# ----------------------- Routes ------------------------
+# --------------------- Routes ----------------------
 
-# Home route
+# Home route: displays a default video feed with the sidebar always visible.
 @app.route('/')
 def home():
-    if current_user.is_authenticated:
-        html = """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <title>Welcome, {{ current_user.username }}</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
-              background-size: cover;
-              margin: 0;
-            }
-            .content {
-              padding: 20px;
-              background: rgba(255, 255, 255, 0.9);
-              margin: 20px;
-            }
-          </style>
-        </head>
-        <body>
-          {%% include 'navbar' %%}
-          <div class="content">
-            <h1>Welcome, {{ current_user.username }}</h1>
-            <p>This is your personalized homepage where you can upload videos, go live, and more!</p>
-          </div>
-        </body>
-        </html>
-        """
-        # Inject navbar_template into the HTML by replacing a placeholder
-        html = html.replace("{%% include 'navbar' %%}", navbar_template)
-        return render_template_string(html)
-    else:
-        html = """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <title>Welcome to Our Site</title>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
-              background-size: cover;
-              margin: 0;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              height: 100vh;
-            }
-            .login-container {
-              background: rgba(255,255,255,0.9);
-              padding: 30px;
-              border-radius: 10px;
-              text-align: center;
-            }
-            .login-container a {
-              margin: 0 10px;
-              text-decoration: none;
-              color: #007bff;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="login-container">
-            <h1>Welcome to Our Site!</h1>
-            <p>Please <a href="{{ url_for('login') }}">Login</a> or <a href="{{ url_for('signup') }}">Sign Up</a></p>
-            <p>Or explore our videos: <a href="{{ url_for('explore') }}">Explore</a></p>
-          </div>
-        </body>
-        </html>
-        """
-        return render_template_string(html)
+    videos = Video.query.order_by(Video.timestamp.desc()).all()
+    html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Welcome to Desibeatz</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          background: url("{{ url_for('static', filename='background1.gif') }}") no-repeat center center fixed;
+          background-size: cover;
+          margin: 0;
+        }
+        .main-content {
+          margin-left: 220px;
+          padding: 20px;
+          background: rgba(255, 255, 255, 0.9);
+          min-height: 100vh;
+        }
+        .video-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 20px;
+        }
+        .video-item {
+          width: 320px;
+          background: #fff;
+          padding: 10px;
+          border-radius: 5px;
+        }
+        .video-item video {
+          width: 100%;
+          height: auto;
+        }
+      </style>
+    </head>
+    <body>
+      {%% include 'sidebar' %%}
+      <div class="main-content">
+        <h1>Welcome to Desibeatz</h1>
+        <div class="video-grid">
+          {% for vid in videos %}
+            <div class="video-item">
+              <h3>{{ vid.title }}</h3>
+              <p>By: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+              <video controls>
+                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+    # Inject sidebar_template into the HTML by replacing the placeholder
+    html = html.replace("{%% include 'sidebar' %%}", sidebar_template)
+    return render_template_string(html, videos=videos)
 
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
@@ -314,7 +336,6 @@ def upload():
         if file.filename == '':
             flash("No selected file", "danger")
             return redirect(request.url)
-        # Optionally, check file extension here...
         if file:
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
@@ -359,8 +380,7 @@ def livestream():
         if not title:
             flash("Please provide a livestream title.", "danger")
             return redirect(url_for('livestream'))
-        # In a full implementation, you would record and save the livestream.
-        # Here we simulate by saving a dummy file entry.
+        # Simulate livestream saving by creating a dummy video record.
         dummy_filename = "livestream_" + secure_filename(title) + ".mp4"
         new_video = Video(title=title, filename=dummy_filename, user_id=current_user.id, is_livestream=True)
         db.session.add(new_video)
@@ -416,10 +436,9 @@ def livestream():
     """
     return render_template_string(livestream_page)
 
-# Explore route: publicly display all uploaded videos (except livestream previews)
+# Explore route: publicly display all uploaded videos (with interactive features)
 @app.route('/explore', methods=['GET', 'POST'])
 def explore():
-    # Handle comment submission for a video
     if request.method == 'POST' and current_user.is_authenticated:
         video_id = request.form.get('video_id')
         comment_text = request.form.get('comment')
@@ -447,50 +466,51 @@ def explore():
       </style>
     </head>
     <body>
-      {%% include 'navbar' %%}
-      <h2>Explore Videos</h2>
-      {% for vid in videos %}
-        <div class="video-container">
-          <h3>{{ vid.title }}</h3>
-          <p>Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
-          <video controls>
-            <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
-            Your browser does not support the video tag.
-          </video>
-          <div class="actions">
-            <a href="{{ url_for('toggle_like', video_id=vid.id) }}">
-              <button>Like ({{ vid.liked_by|length }})</button>
-            </a>
-            <a href="{{ url_for('toggle_bookmark', video_id=vid.id) }}">
-              <button>Bookmark ({{ vid.bookmarked_by|length }})</button>
-            </a>
-            <button onclick="alert('Share Link: {{ url_for('uploaded_file', filename=vid.filename, _external=True) }}')">Share</button>
+      {%% include 'sidebar' %%}
+      <div class="main-content" style="margin-left:220px; padding:20px;">
+        <h2>Explore Videos</h2>
+        {% for vid in videos %}
+          <div class="video-container">
+            <h3>{{ vid.title }}</h3>
+            <p>Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
+            <video controls>
+              <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+              Your browser does not support the video tag.
+            </video>
+            <div class="actions">
+              <a href="{{ url_for('toggle_like', video_id=vid.id) }}">
+                <button>Like ({{ vid.liked_by|length }})</button>
+              </a>
+              <a href="{{ url_for('toggle_bookmark', video_id=vid.id) }}">
+                <button>Bookmark ({{ vid.bookmarked_by|length }})</button>
+              </a>
+              <button onclick="alert('Share Link: {{ url_for('uploaded_file', filename=vid.filename, _external=True) }}')">Share</button>
+            </div>
+            <div class="comment-section">
+              <h4>Comments:</h4>
+              {% for c in vid.comments %}
+                <div class="comment">
+                  <strong>{{ c.author.username }}</strong>: {{ c.content }}<br>
+                  <small>{{ c.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+                </div>
+              {% endfor %}
+              {% if current_user.is_authenticated %}
+              <form method="POST" action="{{ url_for('explore') }}">
+                <input type="hidden" name="video_id" value="{{ vid.id }}">
+                <input type="text" name="comment" placeholder="Add a comment..." required style="width:80%;">
+                <button type="submit">Comment</button>
+              </form>
+              {% endif %}
+            </div>
           </div>
-          <div class="comment-section">
-            <h4>Comments:</h4>
-            {% for c in vid.comments %}
-              <div class="comment">
-                <strong>{{ c.author.username }}</strong>: {{ c.content }}<br>
-                <small>{{ c.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-              </div>
-            {% endfor %}
-            {% if current_user.is_authenticated %}
-            <form method="POST" action="{{ url_for('explore') }}">
-              <input type="hidden" name="video_id" value="{{ vid.id }}">
-              <input type="text" name="comment" placeholder="Add a comment..." required style="width:80%;">
-              <button type="submit">Comment</button>
-            </form>
-            {% endif %}
-          </div>
-        </div>
-      {% endfor %}
-      <br>
-      <a href="{{ url_for('home') }}">Back to Home</a>
+        {% endfor %}
+        <br>
+        <a href="{{ url_for('home') }}">Back to Home</a>
+      </div>
     </body>
     </html>
     """
-    # Inject navbar_template into the HTML by replacing the placeholder
-    explore_page = explore_page.replace("{%% include 'navbar' %%}", navbar_template)
+    explore_page = explore_page.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(explore_page, videos=videos)
 
 # Endpoints for like and bookmark toggling
@@ -560,8 +580,8 @@ def profile():
       </style>
     </head>
     <body>
-      {%% include 'navbar' %%}
-      <div class="profile-container">
+      {%% include 'sidebar' %%}
+      <div class="profile-container" style="margin-left:220px;">
         <div class="profile-header">
           <img src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Profile Picture">
           <div class="profile-info">
@@ -621,7 +641,7 @@ def profile():
     </body>
     </html>
     """
-    profile_page = profile_page.replace("{%% include 'navbar' %%}", navbar_template)
+    profile_page = profile_page.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(profile_page, user_videos=user_videos, user_livestreams=user_livestreams, followers_list=followers_list)
 
 @app.route('/logout')
