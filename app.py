@@ -31,12 +31,10 @@ followers = db.Table('followers',
     db.Column('follower_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('followed_id', db.Integer, db.ForeignKey('user.id'))
 )
-
 likes_table = db.Table('likes',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('video_id', db.Integer, db.ForeignKey('video.id'))
 )
-
 bookmarks_table = db.Table('bookmarks',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('video_id', db.Integer, db.ForeignKey('video.id'))
@@ -162,6 +160,8 @@ sidebar_template = """
 @app.route('/')
 def home():
     videos = Video.query.order_by(Video.timestamp.desc()).all()
+    # The welcome message block is centered horizontally but its text is left-aligned in white,
+    # using the Proxima Nova font.
     home_html = """
     <!DOCTYPE html>
     <html lang="en">
@@ -179,15 +179,13 @@ def home():
           padding: 20px;
         }
         .welcome-message {
-          text-align: center;
-          background: rgba(255, 255, 255, 0.2);
-          color: #000;
-          padding: 20px;
-          border-radius: 10px;
           margin: 40px auto;
           width: 60%;
           font-size: 2em;
           font-weight: 600;
+          color: #fff;
+          text-align: left;
+          padding: 20px;
         }
         .video-feed {
           display: flex;
@@ -205,6 +203,7 @@ def home():
           display: block;
           border: none;
           background: #000;
+          /* Add playsinline attribute to help mobile playback */
         }
         .video-info {
           margin-top: 5px;
@@ -217,13 +216,13 @@ def home():
       {%% include 'sidebar' %%}
       <div class="main-content">
         <div class="welcome-message">
-          Welcome to Desibeatz<br>
+          Desibeatz<br>
           <span style="font-size:0.6em;">Your personalized video</span>
         </div>
         <div class="video-feed">
           {% for vid in videos %}
             <div class="video-card">
-              <video controls>
+              <video controls playsinline>
                 <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
@@ -241,221 +240,7 @@ def home():
     home_html = home_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(home_html, videos=videos)
 
-# ----- EXPLORE Page -----
-@app.route('/explore', methods=['GET', 'POST'])
-def explore():
-    if request.method == 'POST' and current_user.is_authenticated:
-        video_id = request.form.get('video_id')
-        comment_text = request.form.get('comment')
-        if video_id and comment_text:
-            new_comment = Comment(content=comment_text, user_id=current_user.id, video_id=int(video_id))
-            db.session.add(new_comment)
-            db.session.commit()
-            flash("Comment added!", "success")
-            return redirect(url_for('explore'))
-    videos = Video.query.order_by(Video.timestamp.desc()).all()
-    explore_html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>Explore Videos</title>
-      <style>
-        .main-content {
-          margin-left: 220px;
-          padding: 20px;
-        }
-        .video-container {
-          margin: 20px;
-          display: inline-block;
-          vertical-align: top;
-          width: 320px;
-        }
-        .video-container video {
-          width: 100%;
-          background: #000;
-          border: none;
-        }
-        .actions button {
-          margin-right: 5px;
-          padding: 5px 10px;
-          background: #111;
-          color: #fff;
-          border: none;
-          border-radius: 3px;
-          cursor: pointer;
-        }
-        .actions button:hover {
-          background: #444;
-        }
-        .comment-section {
-          margin-top: 10px;
-        }
-        .comment {
-          background: #333;
-          padding: 5px;
-          border-radius: 3px;
-          margin-bottom: 5px;
-          color: #fff;
-        }
-      </style>
-    </head>
-    <body>
-      {%% include 'sidebar' %%}
-      <div class="main-content">
-        <h2>Explore Videos</h2>
-        {% for vid in videos %}
-          <div class="video-container">
-            <video controls>
-              <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
-              Your browser does not support the video tag.
-            </video>
-            <p style="margin:5px 0;"><strong>{{ vid.title }}</strong></p>
-            <p style="font-size:0.85em;">Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
-            <div class="actions">
-              <a href="{{ url_for('toggle_like', video_id=vid.id) }}"><button>Like ({{ vid.liked_by|length }})</button></a>
-              <a href="{{ url_for('toggle_bookmark', video_id=vid.id) }}"><button>Bookmark ({{ vid.bookmarked_by|length }})</button></a>
-              <button onclick="alert('Share Link: {{ url_for('uploaded_file', filename=vid.filename, _external=True) }}')">Share</button>
-            </div>
-            <div class="comment-section">
-              <h4 style="margin:10px 0 5px;">Comments:</h4>
-              {% for c in vid.comments %}
-                <div class="comment">
-                  <strong>{{ c.author.username }}</strong>: {{ c.content }}<br>
-                  <small>{{ c.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-                </div>
-              {% endfor %}
-              {% if current_user.is_authenticated %}
-                <form method="POST" action="{{ url_for('explore') }}">
-                  <input type="hidden" name="video_id" value="{{ vid.id }}">
-                  <input type="text" name="comment" placeholder="Add a comment..." required style="width:70%;">
-                  <button type="submit" style="padding:5px 10px;">Comment</button>
-                </form>
-              {% endif %}
-            </div>
-          </div>
-        {% endfor %}
-        <br>
-        <a href="{{ url_for('home') }}" style="color:#fff; text-decoration:none;">Back to Home</a>
-      </div>
-    </body>
-    </html>
-    """
-    explore_html = explore_html.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(explore_html, videos=videos)
-
-# ----- FOLLOWING (Placeholder) Page -----
-@app.route('/following')
-@login_required
-def following():
-    following_html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>Following</title>
-      <style>
-        .main-content {
-          margin-left: 220px;
-          padding: 20px;
-          color: #fff;
-        }
-      </style>
-    </head>
-    <body>
-      {%% include 'sidebar' %%}
-      <div class="main-content">
-        <h2>Your Following Feed</h2>
-        <p>This is a placeholder for following content.</p>
-        <a href="{{ url_for('home') }}" style="color:#fff; text-decoration:none;">Back to Home</a>
-      </div>
-    </body>
-    </html>
-    """
-    following_html = following_html.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(following_html)
-
-# ----- UPLOAD (Protected: requires login) -----
-@app.route('/upload', methods=['GET', 'POST'])
-@login_required
-def upload():
-    if request.method == 'POST':
-        title = request.form.get('title')
-        if not title:
-            flash("Please provide a video title.", "danger")
-            return redirect(url_for('upload'))
-        if 'video' not in request.files:
-            flash("No video file part", "danger")
-            return redirect(request.url)
-        file = request.files['video']
-        if file.filename == '':
-            flash("No selected file", "danger")
-            return redirect(request.url)
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        new_video = Video(title=title, filename=filename, user_id=current_user.id, is_livestream=False)
-        db.session.add(new_video)
-        db.session.commit()
-        flash("Video uploaded successfully!", "success")
-        return redirect(url_for('profile'))
-    upload_html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>Upload Video</title>
-      <style>
-        .main-content {
-          margin-left: 220px;
-          padding: 20px;
-          color: #fff;
-        }
-        .upload-form {
-          max-width: 400px;
-          margin: 50px auto;
-          background: #222;
-          padding: 20px;
-          border-radius: 5px;
-        }
-        input, textarea {
-          width: 100%;
-          padding: 10px;
-          margin: 10px 0;
-          color: #000;
-        }
-        button {
-          padding: 10px;
-          width: 100%;
-          background: #ff0066;
-          color: #fff;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        }
-        button:hover {
-          background: #ff3399;
-        }
-      </style>
-    </head>
-    <body>
-      {%% include 'sidebar' %%}
-      <div class="main-content">
-        <div class="upload-form">
-          <h2 style="margin-bottom:20px;">Upload Your Video</h2>
-          <form method="POST" enctype="multipart/form-data">
-            <input type="text" name="title" placeholder="Video Title" required>
-            <input type="file" name="video" required>
-            <button type="submit">Upload</button>
-          </form>
-        </div>
-      </div>
-    </body>
-    </html>
-    """
-    upload_html = upload_html.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(upload_html)
-
-# ----- LIVESTREAM (Exact TikTok-style copy) -----
+# ----- LIVESTREAM (Exact TikTok‑style Copy with Toggle Button and Chat Heading) -----
 @app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
@@ -464,6 +249,7 @@ def livestream():
         if not title:
             flash("Please provide a livestream title.", "danger")
             return redirect(url_for('livestream'))
+        # For simulation, create a dummy video record
         dummy_filename = "livestream_" + secure_filename(title) + ".mp4"
         new_video = Video(title=title, filename=dummy_filename, user_id=current_user.id, is_livestream=True)
         db.session.add(new_video)
@@ -485,11 +271,11 @@ def livestream():
           color: #000;
         }
         .main-container {
-          margin-left: 220px; /* leave space for sidebar */
+          margin-left: 220px;
           display: flex;
           min-height: 100vh;
         }
-        /* Center column with livestream video and controls */
+        /* Center Column with livestream video and controls */
         .live-center {
           flex: 1;
           padding: 20px;
@@ -538,7 +324,7 @@ def livestream():
           height: auto;
           background: #000;
         }
-        /* Right column with chat box / log in prompt */
+        /* Right Column (Chat) */
         .live-right {
           width: 320px;
           background: #f8f8f8;
@@ -548,29 +334,12 @@ def livestream():
           flex-direction: column;
           justify-content: space-between;
         }
-        .login-box {
-          background: #fff;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          padding: 20px;
+        .chat-heading {
           text-align: center;
-          margin-bottom: 20px;
-        }
-        .login-box h3 {
-          margin: 0 0 10px 0;
-          font-size: 1.1em;
-        }
-        .login-button {
-          padding: 10px 20px;
-          background: #fe2c55;
-          color: #fff;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
+          font-size: 1em;
           font-weight: bold;
-        }
-        .login-button:hover {
-          background: #ff527c;
+          margin-bottom: 10px;
+          color: #000;
         }
         .comment-feed {
           flex: 1;
@@ -600,26 +369,19 @@ def livestream():
         <div class="live-center">
           <h2>Live</h2>
           <div class="live-form">
-            <form id="liveForm" method="POST" style="margin-bottom:0;">
-              <input type="text" name="title" placeholder="Livestream Title" required>
-              <div class="live-buttons">
-                <button type="button" id="startBtn">Start Livestream Preview</button>
-                <button type="submit">Save Livestream</button>
-              </div>
-            </form>
+            <input type="text" id="liveTitle" name="title" placeholder="Livestream Title" required>
+            <div class="live-buttons">
+              <button type="button" id="toggleBtn">Start Livestream Preview</button>
+            </div>
           </div>
           <div class="live-video-container">
-            <video id="liveVideo" autoplay muted></video>
+            <video id="liveVideo" autoplay muted playsinline></video>
           </div>
         </div>
-        <!-- Right Column -->
+        <!-- Right Column (Chat) -->
         <div class="live-right">
           <div>
-            <div class="login-box">
-              <h3>Log in for full experience</h3>
-              <p>Log in to follow creators, like videos, and view comments.</p>
-              <button class="login-button" onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
-            </div>
+            <div class="chat-heading">Chat</div>
             <div class="comment-feed" id="chatFeed">
               <div class="comment-item"><strong>User1:</strong> This is so cool!</div>
               <div class="comment-item"><strong>User2:</strong> Wow, amazing stream</div>
@@ -632,20 +394,28 @@ def livestream():
         </div>
       </div>
       <script>
-        const startBtn = document.getElementById('startBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
         const liveVideo = document.getElementById('liveVideo');
-        startBtn.addEventListener('click', async () => {
-          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            try {
-              const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-              liveVideo.srcObject = stream;
-              startBtn.disabled = true;
-              startBtn.innerText = "Livestreaming...";
-            } catch (error) {
-              alert("Error accessing camera/microphone: " + error);
+        let stream;
+        toggleBtn.addEventListener('click', async () => {
+          if (toggleBtn.innerText === "Start Livestream Preview") {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+              try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                liveVideo.srcObject = stream;
+                toggleBtn.innerText = "Stop Livestream Preview";
+              } catch (error) {
+                alert("Error accessing camera/microphone: " + error);
+              }
+            } else {
+              alert("getUserMedia not supported in this browser.");
             }
           } else {
-            alert("getUserMedia not supported in this browser.");
+            if (stream) {
+              stream.getTracks().forEach(track => track.stop());
+              liveVideo.srcObject = null;
+            }
+            toggleBtn.innerText = "Start Livestream Preview";
           }
         });
       </script>
@@ -699,7 +469,6 @@ def profile():
         db.session.commit()
         flash("Profile updated successfully!", "success")
         return redirect(url_for('profile'))
-
     user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
     following_count = 72
     followers_count = "58.3M"
@@ -880,7 +649,7 @@ def profile():
         <div class="videos-grid">
           {% for vid in user_videos %}
             <div class="video-card">
-              <video controls>
+              <video controls playsinline>
                 <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
@@ -1055,7 +824,7 @@ def public_profile(username):
         <div class="videos-grid">
           {% for vid in user.videos %}
             <div class="video-card">
-              <video controls>
+              <video controls playsinline>
                 <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
                 Your browser does not support the video tag.
               </video>
