@@ -55,7 +55,6 @@ class Video(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     uploader_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    # Relationship to associate a video with its uploader.
     uploader = db.relationship('User', backref=db.backref('videos', lazy=True))
 
 @login_manager.user_loader
@@ -67,7 +66,6 @@ def load_user(user_id):
 # ------------------------------------------------------------------
 
 # Home page route.
-# If a user is logged in, render the logged‑in homepage (index1.html). Otherwise, render index.html.
 @app.route('/')
 def home():
     if current_user.is_authenticated:
@@ -77,11 +75,10 @@ def home():
 
 # -------------------- Authentication Routes --------------------
 
-# Login route: displays the login page and processes login submissions.
+# Login route.
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Retrieve email and password from the login form.
         email = request.form.get('email')
         password = request.form.get('password')
         if not email or not password:
@@ -89,7 +86,7 @@ def login():
             return redirect(url_for('login'))
         user = User.query.filter_by(email=email).first()
         if user and user.verify_password(password):
-            login_user(user, remember=True)  # Using remember=True to persist sessions.
+            login_user(user, remember=True)
             flash("Login successful!", "success")
             return redirect(url_for('home'))
         else:
@@ -97,7 +94,7 @@ def login():
             return redirect(url_for('login'))
     return render_template('login.html')
 
-# Signup route: displays the signup page and processes signup submissions.
+# Signup route.
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -111,7 +108,7 @@ def signup():
             flash("Email already exists.", "warning")
             return redirect(url_for('signup'))
         new_user = User(username=username, email=email)
-        new_user.password = password  # This hashes the password.
+        new_user.password = password
         try:
             db.session.add(new_user)
             db.session.commit()
@@ -125,7 +122,7 @@ def signup():
         return redirect(url_for('home'))
     return render_template('signup.html')
 
-# Logout route: logs out the user.
+# Logout route.
 @app.route('/logout')
 @login_required
 def logout():
@@ -135,19 +132,15 @@ def logout():
 
 # -------------------- Functional Routes --------------------
 
-# Explore route for logged-in users.
 @app.route('/explore')
 @login_required
 def explore():
-    # Replace with: return render_template('explore.html') if you have a template.
     return "<h1>Explore Page (Under Construction)</h1>"
 
-# Upload route: Handles GET to display upload form and POST to process video upload.
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
     if request.method == 'POST':
-        # Check if a video file part is in the request.
         if 'video' not in request.files:
             flash("No video file part.", "danger")
             return redirect(request.url)
@@ -158,35 +151,35 @@ def upload():
         if file:
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            file.save(file_path)
-            # Save video info in the database.
-            new_video = Video(filename=filename, uploader_id=current_user.id)
-            db.session.add(new_video)
-            db.session.commit()
-            flash("Video uploaded successfully!", "success")
-            return redirect(url_for('home'))
+            try:
+                file.save(file_path)
+                new_video = Video(filename=filename, uploader_id=current_user.id)
+                db.session.add(new_video)
+                db.session.commit()
+                flash("Video uploaded successfully!", "success")
+                return redirect(url_for('home'))
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error("Error saving video: %s", e)
+                flash("Error uploading video. Please try again.", "danger")
+                return redirect(request.url)
     return render_template('upload.html')
 
-# Profile route for logged-in users.
 @app.route('/profile')
 @login_required
 def profile():
-    # Replace with: return render_template('profile.html') if you have a template.
     return "<h1>Profile Page for {} (Under Construction)</h1>".format(current_user.username)
 
-# Followers route for logged-in users.
 @app.route('/followers')
 @login_required
 def followers():
-    # Replace with: return render_template('followers.html') if you have a template.
     return "<h1>Followers Page (Under Construction)</h1>"
 
 # ------------------------------------------------------------------
 
 if __name__ == '__main__':
     with app.app_context():
-        # Create the database tables if they do not exist.
         db.create_all()
-    # Bind to 0.0.0.0 and use PORT from environment variables, defaulting to 5000 locally.
+    # Temporarily enable debug mode for better error output during development.
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="0.0.0.0", port=port, debug=True)
