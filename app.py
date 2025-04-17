@@ -1,26 +1,8 @@
 import os
-import re
 from datetime import datetime
-from flask import (
-    Flask,
-    render_template_string,
-    request,
-    redirect,
-    url_for,
-    flash,
-    send_from_directory,
-    abort,
-    Response,
-)
+from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, abort
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import (
-    LoginManager,
-    UserMixin,
-    login_user,
-    logout_user,
-    login_required,
-    current_user,
-)
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -42,7 +24,6 @@ ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'mov', 'avi'}
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login_route'
-
 
 # Many-to-many association tables
 followers = db.Table('followers',
@@ -110,48 +91,11 @@ def load_user(user_id):
 
 with app.app_context():
     db.create_all()
-# ─── MIME helper ────────────────────────────────────────────────────────────────
-def _get_mime_type(filename):
-    ext = filename.rsplit('.', 1)[-1].lower()
-    return {
-        'mp4': 'video/mp4',
-        'mov': 'video/quicktime',
-        'avi': 'video/x-msvideo',
-    }.get(ext, 'application/octet-stream')
-# ────────────────────────────────────────────────────────────────────────────────
 
 # ----- Serve uploaded files -----
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if not os.path.isfile(file_path):
-        abort(404)
-
-    range_header = request.headers.get('Range', None)
-    if not range_header:
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-    size = os.path.getsize(file_path)
-    m = re.match(r'bytes=(\d+)-(\d*)', range_header)
-    if not m:
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
-    byte1 = int(m.group(1))
-    byte2 = int(m.group(2)) if m.group(2) else size - 1
-    byte2 = min(byte2, size - 1)
-    length = byte2 - byte1 + 1
-
-    with open(file_path, 'rb') as f:
-        f.seek(byte1)
-        data = f.read(length)
-
-    rv = Response(data, 206,
-                  mimetype=_get_mime_type(filename),
-                  direct_passthrough=True)
-    rv.headers.add('Content-Range', f'bytes {byte1}-{byte2}/{size}')
-    rv.headers.add('Accept-Ranges', 'bytes')
-    rv.headers.add('Content-Length', str(length))
-    return rv
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # ----- SIDEBAR (Displayed on all pages) -----
 sidebar_template = """
@@ -547,89 +491,143 @@ def upload():
     return render_template_string(upload_html)
 
 # ----- LIVESTREAM (Exact TikTok-style copy) -----
-# ----- LIVESTREAM (TikTok‑style) -----
 @app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
-    # POST → record a dummy livestream entry
     if request.method == 'POST':
-        title = request.form.get('title', "").strip()
+        title = request.form.get('title')
         if not title:
             flash("Please provide a livestream title.", "danger")
             return redirect(url_for('livestream'))
-        dummy_fn = f"livestream_{secure_filename(title)}.mp4"
-        new_video = Video(title=title, filename=dummy_fn,
-                          user_id=current_user.id, is_livestream=True)
+        dummy_filename = "livestream_" + secure_filename(title) + ".mp4"
+        new_video = Video(title=title, filename=dummy_filename, user_id=current_user.id, is_livestream=True)
         db.session.add(new_video)
         db.session.commit()
-        flash("Livestream simulated successfully!", "success")
+        flash("Livestream recorded successfully (simulation)!", "success")
         return redirect(url_for('profile'))
-
     livestream_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>LIVE — TikTok Clone</title>
-      <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        integrity="sha512-pEZeI0xN6gYpQvG9RhkTabG8lWIoFfW4RoW0H1tICDpHJcJYXjOc7DptIJ0aIjrF2UtO+jsY5ZecfP+ujr4i0g=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+      <title>Live</title>
       <style>
-        body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; }
-        .main-container { display:flex; margin-left:220px; min-height:100vh; }
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: 'Proxima Nova', Arial, sans-serif;
+          background: #fff;
+          color: #000;
+        }
+        .main-container {
+          margin-left: 220px;
+          display: flex;
+          min-height: 100vh;
+        }
         .live-center {
-          flex:1; position:relative; background:#000;
-          display:flex; flex-direction:column;
-          align-items:center; justify-content:center;
+          flex: 1;
+          padding: 20px;
+          background: #fff;
         }
-        .live-badge {
-          position:absolute; top:16px; left:16px;
-          background:#fe2c55; color:#fff;
-          padding:4px 8px; font-weight:bold;
-          border-radius:2px;
+        .live-center h2 {
+          text-align: left;
+          margin-top: 0;
         }
-        #liveVideo {
-          width:100%; max-width:720px;
-          border-radius:8px;
+        .live-form {
+          margin-bottom: 20px;
+          text-align: left;
         }
-        .live-controls { margin-top:12px; }
-        .live-controls button {
-          background:#fe2c55; color:#fff;
-          border:none; padding:8px 16px;
-          border-radius:4px; cursor:pointer;
-          font-weight:bold;
+        .live-form input[type="text"] {
+          padding: 10px;
+          margin-bottom: 10px;
+          width: 100%;
+          max-width: 300px;
+        }
+        .live-buttons {
+          display: flex;
+          gap: 10px;
+          margin-top: 10px;
+        }
+        .live-buttons button {
+          padding: 10px 20px;
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .live-buttons button:hover {
+          background: #ff527c;
+        }
+        .live-video-container {
+          width: 100%;
+          max-width: 700px;
+          margin: 0 auto;
+          background: #000;
+          position: relative;
+        }
+        .live-video-container video {
+          width: 100%;
+          height: auto;
+          background: #000;
         }
         .live-right {
-          width:320px; background:#f8f8f8;
-          border-left:1px solid #ddd;
-          display:flex; flex-direction:column;
+          width: 320px;
+          background: #f8f8f8;
+          border-left: 1px solid #ccc;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
         }
         .login-box {
-          background:#fff; margin:20px; padding:20px;
-          border:1px solid #ddd; border-radius:6px;
-          text-align:center;
+          background: #fff;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          padding: 20px;
+          text-align: center;
+          margin-bottom: 20px;
         }
-        .login-box h3 { margin:0 0 12px; }
-        .login-box button {
-          background:#fe2c55; color:#fff;
-          border:none; padding:8px 16px;
-          border-radius:4px; cursor:pointer;
+        .login-box h3 {
+          margin: 0 0 10px 0;
+          font-size: 1.1em;
         }
-        .chat-header { font-weight:bold; padding:0 20px; }
+        .login-button {
+          padding: 10px 20px;
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: bold;
+        }
+        .login-button:hover {
+          background: #ff527c;
+        }
+        .chat-header {
+          font-weight: bold;
+          margin-bottom: 10px;
+          text-align: left;
+        }
         .comment-feed {
-          flex:1; overflow-y:auto;
-          margin:0 20px 20px; background:#fff;
-          border:1px solid #ddd; border-radius:6px;
-          padding:12px;
+          flex: 1;
+          overflow-y: auto;
+          border: 1px solid #ccc;
+          border-radius: 6px;
+          padding: 10px;
+          background: #fff;
         }
-        .comment-feed .comment-item {
-          margin-bottom:12px; font-size:0.9em;
+        .comment-item {
+          margin-bottom: 10px;
+          font-size: 0.9em;
+          line-height: 1.4em;
         }
         .right-footer {
-          text-align:center; padding:12px;
-          font-size:0.8em; color:#999;
+          margin-top: 20px;
+          text-align: center;
+          font-size: 0.85em;
+          color: #999;
         }
       </style>
     </head>
@@ -637,8 +635,61 @@ def livestream():
       {%% include 'sidebar' %%}
       <div class="main-container">
         <div class="live-center">
-          <div class="live-badge">
-
+          <h2>Live</h2>
+          <div class="live-form">
+            <form id="liveForm" method="POST" style="margin-bottom:0;">
+              <input type="text" name="title" placeholder="Livestream Title" required>
+              <div class="live-buttons">
+                <button type="button" id="startBtn">Start Livestream Preview</button>
+              </div>
+            </form>
+          </div>
+          <div class="live-video-container">
+            <video id="liveVideo" autoplay muted></video>
+          </div>
+        </div>
+        <div class="live-right">
+          <div>
+            <div class="login-box">
+              <h3>Log in for full experience</h3>
+              <p>Log in to follow creators, like videos, and view comments.</p>
+              <button class="login-button" onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
+            </div>
+            <div class="chat-header">Chat</div>
+            <div class="comment-feed" id="chatFeed">
+              <div class="comment-item"><strong>User1:</strong> This is so cool!</div>
+              <div class="comment-item"><strong>User2:</strong> Wow, amazing stream</div>
+              <div class="comment-item"><strong>User3:</strong> Hello from NYC</div>
+            </div>
+          </div>
+          <div class="right-footer">
+            © 2023 Desibeatz
+          </div>
+        </div>
+      </div>
+      <script>
+        const startBtn = document.getElementById('startBtn');
+        const liveVideo = document.getElementById('liveVideo');
+        startBtn.addEventListener('click', async () => {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+              liveVideo.srcObject = stream;
+              startBtn.disabled = false;
+              startBtn.innerText = "Stop Livestream";
+            } catch (error) {
+              alert("Error accessing camera/microphone: " + error);
+            }
+          } else {
+            alert("getUserMedia not supported in this browser.");
+          }
+        });
+      </script>
+    </body>
+    </html>
+    """
+    livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+    return render_template_string(livestream_html)
 
 # ----- LIKE & BOOKMARK -----
 @app.route('/like/<int:video_id>')
@@ -664,121 +715,232 @@ def toggle_bookmark(video_id):
     return redirect(request.referrer or url_for('explore'))
 
 # ----- PROFILE (Editable TikTok-Style for Current User) -----
-# ----- PROFILE (TikTok‑style) -----
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    # POST → handle bio & picture updates
     if request.method == 'POST':
-        current_user.bio = request.form.get('bio', "")
+        bio = request.form.get('bio')
+        current_user.bio = bio or ""
         if 'profile_picture' in request.files:
             file = request.files['profile_picture']
-            if file and file.filename:
-                fn = secure_filename(file.filename)
-                ext = fn.rsplit('.',1)[1].lower()
-                if ext in ALLOWED_IMAGE_EXTENSIONS:
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], fn))
-                    current_user.profile_picture = fn
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                file_ext = filename.rsplit('.', 1)[1].lower()
+                if file_ext in ALLOWED_IMAGE_EXTENSIONS:
+                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                    current_user.profile_picture = filename
                 else:
                     flash("Invalid image file.", "danger")
                     return redirect(url_for('profile'))
         db.session.commit()
-        flash("Profile updated!", "success")
+        flash("Profile updated successfully!", "success")
         return redirect(url_for('profile'))
 
-    # GET → gather data
-    user_videos    = Video.query.filter_by(user_id=current_user.id)\
-                       .order_by(Video.timestamp.desc()).all()
+    user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
     following_count = 72
     followers_count = "58.3M"
-    likes_count     = "631.9M"
-
+    likes_count = "631.9M"
     profile_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>{{ current_user.username }} — Profile</title>
-      <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        integrity="sha512-pEZeI0xN6gYpQvG9RhkTabG8lWIoFfW4RoW0H1tICDpHJcJYXjOc7DptIJ0aIjrF2UtO+jsY5ZecfP+ujr4i0g=="
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+      <title>{{ current_user.username }}'s Profile</title>
       <style>
-        body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#f8f8f8; }
-        .main-content { margin-left:220px; padding:20px; background:#fff; min-height:100vh; }
-        .profile-header { display:flex; align-items:center; gap:20px;
-                          border-bottom:1px solid #eee; padding-bottom:20px; }
-        .avatar { width:120px; height:120px; border-radius:50%;
-                  object-fit:cover; background:#ddd; }
-        .profile-info h2 { font-size:1.8em; margin:0; display:flex;
-                           align-items:center; gap:8px; }
-        .profile-info h2 .fa-check-circle { color:#20d5ec; font-size:0.8em; }
-        .profile-info .handle { color:#666; margin:4px 0 12px; }
-        .stats { display:flex; gap:30px; margin-bottom:12px; }
-        .stats div { text-align:center; } .stats div strong { display:block; font-size:1.2em; }
-        .follow-btn { background:#fe2c55; color:#fff; border:none; padding:8px 24px;
-                      border-radius:4px; font-weight:bold; cursor:pointer; }
-        .profile-nav { margin-top:20px; border-bottom:1px solid #eee; }
-        .profile-nav ul { list-style:none; display:flex; padding:0; }
-        .profile-nav li { margin-right:32px; padding:12px 0; cursor:pointer;
-                          position:relative; }
-        .profile-nav li.active { color:#fe2c55; }
-        .profile-nav li.active::after { content:""; position:absolute;
-                                        bottom:-1px; left:0; right:0;
-                                        height:2px; background:#fe2c55; }
-        .videos-grid { display:grid;
-                      grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-                      gap:10px; margin-top:20px; }
-        .video-card { background:#f9f9f9; border:1px solid #eee;
-                      border-radius:4px; overflow:hidden; text-align:center; }
-        .video-card video { width:100%; display:block; }
-        .video-title { margin:8px 0; font-size:0.9em; font-weight:bold; }
+        body {
+          background: #f8f8f8;
+          margin: 0;
+          padding: 0;
+          font-family: 'Proxima Nova', Arial, sans-serif;
+        }
+        .main-content {
+          margin-left: 220px;
+          min-height: 100vh;
+          background: #fff;
+          color: #000;
+          padding: 20px;
+          position: relative;
+        }
+        .profile-header {
+          display: flex;
+          align-items: center;
+          margin-bottom: 20px;
+          border-bottom: 1px solid #ccc;
+          padding-bottom: 20px;
+        }
+        .avatar {
+          width: 100px;
+          height: 100px;
+          border-radius: 50%;
+          object-fit: cover;
+          background: #000;
+          margin-right: 20px;
+        }
+        .profile-info {
+          flex: 1;
+        }
+        .display-name {
+          font-size: 1.4em;
+          font-weight: bold;
+          margin: 0;
+        }
+        .username-handle {
+          color: #666;
+          font-size: 0.9em;
+          margin-top: 5px;
+        }
+        .stats-row {
+          display: flex;
+          gap: 25px;
+          margin-top: 10px;
+        }
+        .stat-item strong {
+          display: block;
+          font-size: 1.2em;
+          color: #000;
+        }
+        .follow-button {
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
+          margin-top: 10px;
+        }
+        .follow-button:hover {
+          background: #ff527c;
+        }
+        .bio-text {
+          margin-top: 10px;
+          color: #333;
+          font-size: 0.9em;
+        }
+        .edit-profile-form {
+          margin-top: 10px;
+        }
+        .edit-profile-form label {
+          font-size: 0.85em;
+          color: #333;
+        }
+        /* hide native file input, style label */
+        input[type="file"] { display: none; }
+        .file-input-label {
+          display: inline-block;
+          background: #fe2c55;
+          color: #fff;
+          padding: 6px 10px;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-top: 6px;
+        }
+        .file-input-label:hover {
+          background: #ff527c;
+        }
+        .videos-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          gap: 10px;
+          margin-top: 20px;
+        }
+        .video-card {
+          background: #f9f9f9;
+          border: 1px solid #eee;
+          border-radius: 4px;
+          overflow: hidden;
+          text-align: center;
+          padding: 10px;
+        }
+        .video-card video {
+          width: 100%;
+          border: none;
+          background: #000;
+          margin-bottom: 8px;
+        }
+        .video-title {
+          font-weight: bold;
+          color: #333;
+          margin-bottom: 5px;
+          font-size: 0.9em;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+        }
+        .video-timestamp {
+          font-size: 0.75em;
+          color: #999;
+        }
+        .upload-button {
+          position: absolute;
+          right: 20px;
+          top: 20px;
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+        .upload-button:hover {
+          background: #ff527c;
+        }
       </style>
     </head>
     <body>
       {%% include 'sidebar' %%}
       <div class="main-content">
+        <a href="{{ url_for('upload') }}" class="upload-button">Upload</a>
         <div class="profile-header">
-          <img src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}"
-               class="avatar" alt="Avatar">
+          <img class="avatar" src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Profile Picture">
           <div class="profile-info">
-            <h2>{{ current_user.username }} <i class="fa fa-check-circle"></i></h2>
-            <div class="handle">@{{ current_user.username }}</div>
-            <div class="stats">
-              <div><strong>{{ following_count }}</strong>Following</div>
-              <div><strong>{{ followers_count }}</strong>Followers</div>
-              <div><strong>{{ likes_count }}</strong>Likes</div>
+            <h2 class="display-name">{{ current_user.username }}</h2>
+            <div class="username-handle">@{{ current_user.username }}</div>
+            <div class="stats-row">
+              <div class="stat-item"><strong>{{ following_count }}</strong> Following</div>
+              <div class="stat-item"><strong>{{ followers_count }}</strong> Followers</div>
+              <div class="stat-item"><strong>{{ likes_count }}</strong> Likes</div>
             </div>
-            <button class="follow-btn" disabled>Edit profile</button>
+            <button class="follow-button" disabled>Edit Profile</button>
+            <div class="bio-text">{{ current_user.bio }}</div>
+            <form method="POST" enctype="multipart/form-data" class="edit-profile-form">
+              <label>Update Bio:</label>
+              <textarea name="bio" rows="2">{{ current_user.bio }}</textarea>
+              <label for="profile_picture" class="file-input-label">Change Profile Picture</label>
+              <input type="file" id="profile_picture" name="profile_picture" accept=".png,.jpg,.jpeg,.gif">
+              <button type="submit" style="background:#fe2c55; color:#fff; border:none; border-radius:4px; padding:5px 15px; cursor:pointer;">Save</button>
+            </form>
           </div>
         </div>
-
-        <nav class="profile-nav">
-          <ul>
-            <li class="active">Videos</li>
-            <li>Reposts</li>
-            <li>Likes</li>
-          </ul>
-        </nav>
-
         <div class="videos-grid">
           {% for vid in user_videos %}
             <div class="video-card">
-              <video src="{{ url_for('uploaded_file', filename=vid.filename) }}"
-                     controls></video>
-              <div class="video-title">{{ vid.title }}</div>
+              {% set ext = vid.filename.rsplit('.', 1)[1].lower() %}
+              {% if ext == 'mp4' %}
+                {% set mime = 'video/mp4' %}
+              {% elif ext == 'mov' %}
+                {% set mime = 'video/quicktime' %}
+              {% elif ext == 'avi' %}
+                {% set mime = 'video/x-msvideo' %}
+              {% else %}
+                {% set mime = 'video/mp4' %}
+              {% endif %}
+              <video controls>
+                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="{{ mime }}">
+                Your browser does not support the video tag.
+              </video>
+              <p class="video-title">{{ vid.title }}</p>
+              <p class="video-timestamp">{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
             </div>
           {% else %}
-            <p style="grid-column:1/-1; text-align:center; color:#666">
-              No videos uploaded yet.
-            </p>
+            <p style="grid-column: 1 / -1; text-align: center; color: #666;">No videos uploaded yet.</p>
           {% endfor %}
         </div>
       </div>
     </body>
     </html>
     """
-
     profile_html = profile_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(
         profile_html,
@@ -787,7 +949,6 @@ def profile():
         likes_count=likes_count,
         user_videos=user_videos
     )
-
 
 # ----- PUBLIC PROFILE (by username) -----
 @app.route('/<username>')
