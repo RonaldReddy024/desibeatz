@@ -477,8 +477,13 @@ def livestream():
       <meta charset="UTF-8">
       <title>LIVE · Desibeatz</title>
       <style>
-        body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; }
-        .sidebar { /* same sidebar CSS */ }
+        body {
+          margin:0; padding:0;
+          font-family:'Proxima Nova',Arial,sans-serif;
+          background:#fff; color:#000;
+        }
+        .sidebar { /* your sidebar CSS */ }
+
         .wrapper {
           display: flex;
           margin-left: 220px;
@@ -501,6 +506,7 @@ def livestream():
           padding: 20px;
           display: flex;
           flex-direction: column;
+          color: #000;             /* ensure all text here is black */
         }
         .login-box {
           background: #fff;
@@ -509,6 +515,11 @@ def livestream():
           padding: 20px;
           text-align: center;
           margin-bottom: 20px;
+          color: #000;             /* explicit black */
+        }
+        .login-box h3,
+        .login-box p {
+          color: #000;             /* explicit black */
         }
         .login-box button {
           background: #fe2c55;
@@ -522,6 +533,7 @@ def livestream():
         .chat-header {
           font-weight: bold;
           margin-bottom: 10px;
+          color: #000;             /* explicit black */
         }
         .chat-feed {
           flex: 1;
@@ -530,10 +542,12 @@ def livestream():
           border: 1px solid #ddd;
           border-radius: 6px;
           padding: 10px;
+          color: #000;             /* explicit black */
         }
         .chat-item {
           margin-bottom: 12px;
           font-size: 0.9em;
+          color: #000;             /* explicit black */
         }
         .footer {
           text-align: center;
@@ -547,13 +561,13 @@ def livestream():
       {%% include 'sidebar' %%}
       <div class="wrapper">
         <div class="left">
-          <h2>Live</h2>
+          <h2 style="margin-top:0;">Live</h2>
           <video id="liveVideo" autoplay muted></video>
         </div>
         <div class="right">
           <div class="login-box">
             <h3>Log in for full experience</h3>
-            <p>Follow creators, like videos & view comments.</p>
+            <p>Follow creators, like videos &amp; view comments.</p>
             <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
           </div>
           <div class="chat-header">LIVE chat</div>
@@ -575,7 +589,6 @@ def livestream():
     """
     livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(livestream_html)
-
 
 
 # ----- LIKE & BOOKMARK -----
