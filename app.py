@@ -2,8 +2,7 @@ import os
 from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, abort
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import (LoginManager, UserMixin, login_user,
-                         logout_user, login_required, current_user)
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -45,7 +44,7 @@ bookmarks_table = db.Table('bookmarks',
 # ----- Models -----
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), nullable=False)  # also used for profile URLs
+    username = db.Column(db.String(20), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     bio = db.Column(db.Text, default='')
@@ -178,7 +177,6 @@ def home():
           margin-left: 220px;
           padding: 20px;
         }
-        /* Modified welcome message: left aligned and in white letters */
         .welcome-message {
           text-align: left;
           background: transparent;
@@ -223,8 +221,19 @@ def home():
         <div class="video-feed">
           {% for vid in videos %}
             <div class="video-card">
+              {# dynamic MIME type based on extension #}
+              {% set ext = vid.filename.rsplit('.', 1)[1].lower() %}
+              {% if ext == 'mp4' %}
+                {% set mime = 'video/mp4' %}
+              {% elif ext == 'mov' %}
+                {% set mime = 'video/quicktime' %}
+              {% elif ext == 'avi' %}
+                {% set mime = 'video/x-msvideo' %}
+              {% else %}
+                {% set mime = 'video/mp4' %}
+              {% endif %}
               <video controls>
-                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="{{ mime }}">
                 Your browser does not support the video tag.
               </video>
               <div class="video-info">
@@ -306,8 +315,18 @@ def explore():
         <h2>Explore Videos</h2>
         {% for vid in videos %}
           <div class="video-container">
+            {% set ext = vid.filename.rsplit('.', 1)[1].lower() %}
+            {% if ext == 'mp4' %}
+              {% set mime = 'video/mp4' %}
+            {% elif ext == 'mov' %}
+              {% set mime = 'video/quicktime' %}
+            {% elif ext == 'avi' %}
+              {% set mime = 'video/x-msvideo' %}
+            {% else %}
+              {% set mime = 'video/mp4' %}
+            {% endif %}
             <video controls>
-              <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+              <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="{{ mime }}">
               Your browser does not support the video tag.
             </video>
             <p style="margin:5px 0;"><strong>{{ vid.title }}</strong></p>
@@ -398,6 +417,7 @@ def upload():
         db.session.commit()
         flash("Video uploaded successfully!", "success")
         return redirect(url_for('profile'))
+
     upload_html = """
     <!DOCTYPE html>
     <html lang="en">
@@ -417,7 +437,7 @@ def upload():
           padding: 20px;
           border-radius: 5px;
         }
-        input, textarea {
+        input[type="text"] {
           width: 100%;
           padding: 10px;
           margin: 10px 0;
@@ -435,6 +455,20 @@ def upload():
         button:hover {
           background: #ff3399;
         }
+        /* hide native file input, style label */
+        input[type="file"] { display: none; }
+        .file-input-label {
+          display: inline-block;
+          background: #ff0066;
+          color: #fff;
+          padding: 10px 15px;
+          border-radius: 5px;
+          cursor: pointer;
+          margin-top: 10px;
+        }
+        .file-input-label:hover {
+          background: #ff3399;
+        }
       </style>
     </head>
     <body>
@@ -444,7 +478,8 @@ def upload():
           <h2 style="margin-bottom:20px;">Upload Your Video</h2>
           <form method="POST" enctype="multipart/form-data">
             <input type="text" name="title" placeholder="Video Title" required>
-            <input type="file" name="video" required>
+            <label for="video" class="file-input-label">Choose Video File</label>
+            <input type="file" id="video" name="video" accept=".mp4,.mov,.avi" required>
             <button type="submit">Upload</button>
           </form>
         </div>
@@ -485,11 +520,10 @@ def livestream():
           color: #000;
         }
         .main-container {
-          margin-left: 220px; /* leave space for sidebar */
+          margin-left: 220px;
           display: flex;
           min-height: 100vh;
         }
-        /* Center column with livestream video and controls */
         .live-center {
           flex: 1;
           padding: 20px;
@@ -538,7 +572,6 @@ def livestream():
           height: auto;
           background: #000;
         }
-        /* Right column with chat box and header */
         .live-right {
           width: 320px;
           background: #f8f8f8;
@@ -601,7 +634,6 @@ def livestream():
     <body>
       {%% include 'sidebar' %%}
       <div class="main-container">
-        <!-- Center Column -->
         <div class="live-center">
           <h2>Live</h2>
           <div class="live-form">
@@ -609,8 +641,6 @@ def livestream():
               <input type="text" name="title" placeholder="Livestream Title" required>
               <div class="live-buttons">
                 <button type="button" id="startBtn">Start Livestream Preview</button>
-                <!-- When livestream starts, the same button should change to 'Stop' -->
-                <!-- (You can further expand the JavaScript logic to toggle the button text and stop the stream) -->
               </div>
             </form>
           </div>
@@ -618,7 +648,6 @@ def livestream():
             <video id="liveVideo" autoplay muted></video>
           </div>
         </div>
-        <!-- Right Column -->
         <div class="live-right">
           <div>
             <div class="login-box">
@@ -646,10 +675,8 @@ def livestream():
             try {
               const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
               liveVideo.srcObject = stream;
-              // Change the button text to "Stop" once streaming starts
               startBtn.disabled = false;
               startBtn.innerText = "Stop Livestream";
-              // Here you can add logic to stop the stream when clicking again.
             } catch (error) {
               alert("Error accessing camera/microphone: " + error);
             }
@@ -797,13 +824,19 @@ def profile():
           font-size: 0.85em;
           color: #333;
         }
-        .edit-profile-form textarea,
-        .edit-profile-form input[type='file'] {
-          display: block;
+        /* hide native file input, style label */
+        input[type="file"] { display: none; }
+        .file-input-label {
+          display: inline-block;
+          background: #fe2c55;
+          color: #fff;
+          padding: 6px 10px;
+          border-radius: 4px;
+          cursor: pointer;
           margin-top: 6px;
-          margin-bottom: 10px;
-          padding: 6px;
-          width: 220px;
+        }
+        .file-input-label:hover {
+          background: #ff527c;
         }
         .videos-grid {
           display: grid;
@@ -865,23 +898,17 @@ def profile():
             <h2 class="display-name">{{ current_user.username }}</h2>
             <div class="username-handle">@{{ current_user.username }}</div>
             <div class="stats-row">
-              <div class="stat-item">
-                <strong>{{ following_count }}</strong> Following
-              </div>
-              <div class="stat-item">
-                <strong>{{ followers_count }}</strong> Followers
-              </div>
-              <div class="stat-item">
-                <strong>{{ likes_count }}</strong> Likes
-              </div>
+              <div class="stat-item"><strong>{{ following_count }}</strong> Following</div>
+              <div class="stat-item"><strong>{{ followers_count }}</strong> Followers</div>
+              <div class="stat-item"><strong>{{ likes_count }}</strong> Likes</div>
             </div>
             <button class="follow-button" disabled>Edit Profile</button>
             <div class="bio-text">{{ current_user.bio }}</div>
             <form method="POST" enctype="multipart/form-data" class="edit-profile-form">
               <label>Update Bio:</label>
               <textarea name="bio" rows="2">{{ current_user.bio }}</textarea>
-              <label>Change Profile Picture:</label>
-              <input type="file" name="profile_picture">
+              <label for="profile_picture" class="file-input-label">Change Profile Picture</label>
+              <input type="file" id="profile_picture" name="profile_picture" accept=".png,.jpg,.jpeg,.gif">
               <button type="submit" style="background:#fe2c55; color:#fff; border:none; border-radius:4px; padding:5px 15px; cursor:pointer;">Save</button>
             </form>
           </div>
@@ -889,8 +916,18 @@ def profile():
         <div class="videos-grid">
           {% for vid in user_videos %}
             <div class="video-card">
+              {% set ext = vid.filename.rsplit('.', 1)[1].lower() %}
+              {% if ext == 'mp4' %}
+                {% set mime = 'video/mp4' %}
+              {% elif ext == 'mov' %}
+                {% set mime = 'video/quicktime' %}
+              {% elif ext == 'avi' %}
+                {% set mime = 'video/x-msvideo' %}
+              {% else %}
+                {% set mime = 'video/mp4' %}
+              {% endif %}
               <video controls>
-                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="{{ mime }}">
                 Your browser does not support the video tag.
               </video>
               <p class="video-title">{{ vid.title }}</p>
@@ -1043,15 +1080,9 @@ def public_profile(username):
             <h1 class="display-name">{{ user.username }}</h1>
             <div class="username-handle">@{{ user.username }}</div>
             <div class="stats-row">
-              <div class="stat-item">
-                <strong>72</strong> Following
-              </div>
-              <div class="stat-item">
-                <strong>58.3M</strong> Followers
-              </div>
-              <div class="stat-item">
-                <strong>631.9M</strong> Likes
-              </div>
+              <div class="stat-item"><strong>72</strong> Following</div>
+              <div class="stat-item"><strong>58.3M</strong> Followers</div>
+              <div class="stat-item"><strong>631.9M</strong> Likes</div>
             </div>
             {% if not is_own_profile %}
               <button class="follow-button">Follow</button>
@@ -1064,8 +1095,18 @@ def public_profile(username):
         <div class="videos-grid">
           {% for vid in user.videos %}
             <div class="video-card">
+              {% set ext = vid.filename.rsplit('.', 1)[1].lower() %}
+              {% if ext == 'mp4' %}
+                {% set mime = 'video/mp4' %}
+              {% elif ext == 'mov' %}
+                {% set mime = 'video/quicktime' %}
+              {% elif ext == 'avi' %}
+                {% set mime = 'video/x-msvideo' %}
+              {% else %}
+                {% set mime = 'video/mp4' %}
+              {% endif %}
               <video controls>
-                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="{{ mime }}">
                 Your browser does not support the video tag.
               </video>
               <p class="video-title">{{ vid.title }}</p>
@@ -1173,7 +1214,7 @@ def signup_route():
         new_user.password = password
         db.session.add(new_user)
         db.session.commit()
-        flash("Account created! Welcome, {}.".format(username), "success")
+        flash(f"Account created! Welcome, {username}.", "success")
         login_user(new_user)
         return redirect(url_for('home'))
     signup_form = """
