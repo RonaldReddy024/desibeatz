@@ -99,7 +99,6 @@ def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # ----- SIDEBAR (Displayed on all pages) -----
-# Updated with an Indian-inspired colour scheme and our logo
 sidebar_template = """
 <div class="sidebar">
   <div class="sidebar-header">
@@ -124,18 +123,15 @@ sidebar_template = """
   @import url('https://fonts.cdnfonts.com/css/proxima-nova-2');
   body {
     font-family: 'Proxima Nova', Arial, sans-serif;
-    margin: 0; 
-    padding: 0;
+    margin: 0; padding: 0;
     background-color: #000;
     color: #fff;
   }
   .sidebar {
     position: fixed;
-    top: 0; 
-    left: 0;
-    width: 220px; 
-    height: 100vh;
-    background-color: #1a1a1a;  /* a dark charcoal background */
+    top: 0; left: 0;
+    width: 220px; height: 100vh;
+    background-color: #000;
     padding-top: 20px;
     z-index: 999;
   }
@@ -155,16 +151,14 @@ sidebar_template = """
     text-decoration: none;
     padding: 10px 20px;
     display: block;
-    /* Use a bold accent colour for hover */
   }
   .sidebar ul li a:hover {
-    background-color: #ff9933;  /* saffron hover */
+    background-color: #ff0066;
   }
 </style>
 """
 
 # ----- HOME (For You) Page -----
-# Changed the welcome message to be left aligned and centered vertically in the main content; the text is in white using our font.
 @app.route('/')
 def home():
     videos = Video.query.order_by(Video.timestamp.desc()).all()
@@ -184,12 +178,17 @@ def home():
           margin-left: 220px;
           padding: 20px;
         }
+        /* Modified welcome message: left aligned and in white letters */
         .welcome-message {
           text-align: left;
+          background: transparent;
           color: #fff;
+          padding: 20px;
+          border-radius: 10px;
+          margin: 40px 0;
+          width: 60%;
           font-size: 2em;
           font-weight: 600;
-          margin-bottom: 40px;
         }
         .video-feed {
           display: flex;
@@ -456,7 +455,7 @@ def upload():
     upload_html = upload_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(upload_html)
 
-# ----- LIVESTREAM (Exact TikTok-style copy with modifications) -----
+# ----- LIVESTREAM (Exact TikTok-style copy) -----
 @app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
@@ -610,8 +609,8 @@ def livestream():
               <input type="text" name="title" placeholder="Livestream Title" required>
               <div class="live-buttons">
                 <button type="button" id="startBtn">Start Livestream Preview</button>
-                <!-- Notice: We removed a separate 'Save Livestream' button.
-                     When the stream starts, the same button will toggle to "Stop Livestream". -->
+                <!-- When livestream starts, the same button should change to 'Stop' -->
+                <!-- (You can further expand the JavaScript logic to toggle the button text and stop the stream) -->
               </div>
             </form>
           </div>
@@ -631,7 +630,7 @@ def livestream():
             <div class="comment-feed" id="chatFeed">
               <div class="comment-item"><strong>User1:</strong> This is so cool!</div>
               <div class="comment-item"><strong>User2:</strong> Wow, amazing stream</div>
-              <div class="comment-item"><strong>User3:</strong> Hello from Mumbai!</div>
+              <div class="comment-item"><strong>User3:</strong> Hello from NYC</div>
             </div>
           </div>
           <div class="right-footer">
@@ -642,28 +641,20 @@ def livestream():
       <script>
         const startBtn = document.getElementById('startBtn');
         const liveVideo = document.getElementById('liveVideo');
-        let streaming = false;
-        let stream;
         startBtn.addEventListener('click', async () => {
-          if (!streaming) {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-              try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                liveVideo.srcObject = stream;
-                streaming = true;
-                startBtn.innerText = "Stop Livestream";
-              } catch (error) {
-                alert("Error accessing camera/microphone: " + error);
-              }
-            } else {
-              alert("getUserMedia not supported in this browser.");
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+              liveVideo.srcObject = stream;
+              // Change the button text to "Stop" once streaming starts
+              startBtn.disabled = false;
+              startBtn.innerText = "Stop Livestream";
+              // Here you can add logic to stop the stream when clicking again.
+            } catch (error) {
+              alert("Error accessing camera/microphone: " + error);
             }
           } else {
-            // Stop the stream
-            stream.getTracks().forEach(track => track.stop());
-            liveVideo.srcObject = null;
-            streaming = false;
-            startBtn.innerText = "Start Livestream Preview";
+            alert("getUserMedia not supported in this browser.");
           }
         });
       </script>
@@ -719,7 +710,6 @@ def profile():
         return redirect(url_for('profile'))
 
     user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
-    # Placeholder stats from our Indian‑inspired TikTok screenshot
     following_count = 72
     followers_count = "58.3M"
     likes_count = "631.9M"
