@@ -1,6 +1,11 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, abort
+-from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, abort
++import re
++from flask import (
++    Flask, render_template_string, request, redirect,
++    url_for, flash, send_from_directory, abort, Response
++)
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -91,10 +96,48 @@ def load_user(user_id):
 
 with app.app_context():
     db.create_all()
+def _get_mime_type(filename):
+    ext = filename.rsplit('.', 1)[-1].lower()
+    return {
+        'mp4': 'video/mp4',
+        'mov': 'video/quicktime',
+        'avi': 'video/x-msvideo',
+    }.get(ext, 'application/octet-stream')
 
 # ----- Serve uploaded files -----
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.isfile(file_path):
+        abort(404)
+
+    range_header = request.headers.get('Range', None)
+    # no Range header? send full file
+    if not range_header:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+    # parse bytes=START-END
+    size = os.path.getsize(file_path)
+    m = re.match(r'bytes=(\d+)-(\d*)', range_header)
+    if not m:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+    byte1 = int(m.group(1))
+    byte2 = int(m.group(2)) if m.group(2) else size - 1
+    byte2 = min(byte2, size - 1)
+    length = byte2 - byte1 + 1
+
+    with open(file_path, 'rb') as f:
+        f.seek(byte1)
+        data = f.read(length)
+
+    rv = Response(data, 206,
+                  mimetype=_get_mime_type(filename),
+                  direct_passthrough=True)
+    rv.headers.add('Content-Range', f'bytes {byte1}-{byte2}/{size}')
+    rv.headers.add('Accept-Ranges', 'bytes')
+    rv.headers.add('Content-Length', str(length))
+    return rv
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 # ----- SIDEBAR (Displayed on all pages) -----
