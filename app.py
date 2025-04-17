@@ -251,117 +251,64 @@ def home():
     return render_template_string(home_html, videos=videos)
 
 # ----- EXPLORE Page -----
-@app.route('/explore', methods=['GET', 'POST'])
+@app.route('/explore')
 def explore():
-    if request.method == 'POST' and current_user.is_authenticated:
-        video_id = request.form.get('video_id')
-        comment_text = request.form.get('comment')
-        if video_id and comment_text:
-            new_comment = Comment(content=comment_text, user_id=current_user.id, video_id=int(video_id))
-            db.session.add(new_comment)
-            db.session.commit()
-            flash("Comment added!", "success")
-            return redirect(url_for('explore'))
     videos = Video.query.order_by(Video.timestamp.desc()).all()
     explore_html = """
     <!DOCTYPE html>
     <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>Explore Videos</title>
-      <style>
-        .main-content {
-          margin-left: 220px;
-          padding: 20px;
-        }
-        .video-container {
-          margin: 20px;
-          display: inline-block;
-          vertical-align: top;
-          width: 320px;
-        }
-        .video-container video {
-          width: 100%;
-          background: #000;
-          border: none;
-        }
-        .actions button {
-          margin-right: 5px;
-          padding: 5px 10px;
-          background: #111;
-          color: #fff;
-          border: none;
-          border-radius: 3px;
-          cursor: pointer;
-        }
-        .actions button:hover {
-          background: #444;
-        }
-        .comment-section {
-          margin-top: 10px;
-        }
-        .comment {
-          background: #333;
-          padding: 5px;
-          border-radius: 3px;
-          margin-bottom: 5px;
-          color: #fff;
-        }
-      </style>
-    </head>
-    <body>
-      {%% include 'sidebar' %%}
-      <div class="main-content">
-        <h2>Explore Videos</h2>
-        {% for vid in videos %}
-          <div class="video-container">
-            {% set ext = vid.filename.rsplit('.', 1)[1].lower() %}
-            {% if ext == 'mp4' %}
-              {% set mime = 'video/mp4' %}
-            {% elif ext == 'mov' %}
-              {% set mime = 'video/quicktime' %}
-            {% elif ext == 'avi' %}
-              {% set mime = 'video/x-msvideo' %}
-            {% else %}
-              {% set mime = 'video/mp4' %}
-            {% endif %}
-            <video controls>
-              <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="{{ mime }}">
-              Your browser does not support the video tag.
-            </video>
-            <p style="margin:5px 0;"><strong>{{ vid.title }}</strong></p>
-            <p style="font-size:0.85em;">Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
-            <div class="actions">
-              <a href="{{ url_for('toggle_like', video_id=vid.id) }}"><button>Like ({{ vid.liked_by|length }})</button></a>
-              <a href="{{ url_for('toggle_bookmark', video_id=vid.id) }}"><button>Bookmark ({{ vid.bookmarked_by|length }})</button></a>
-              <button onclick="alert('Share Link: {{ url_for('uploaded_file', filename=vid.filename, _external=True) }}')">Share</button>
-            </div>
-            <div class="comment-section">
-              <h4 style="margin:10px 0 5px;">Comments:</h4>
-              {% for c in vid.comments %}
-                <div class="comment">
-                  <strong>{{ c.author.username }}</strong>: {{ c.content }}<br>
-                  <small>{{ c.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
-                </div>
-              {% endfor %}
-              {% if current_user.is_authenticated %}
-                <form method="POST" action="{{ url_for('explore') }}">
-                  <input type="hidden" name="video_id" value="{{ vid.id }}">
-                  <input type="text" name="comment" placeholder="Add a comment..." required style="width:70%;">
-                  <button type="submit" style="padding:5px 10px;">Comment</button>
-                </form>
-              {% endif %}
-            </div>
+      <head>
+        <meta charset="UTF-8">
+        <title>Explore · Desibeatz</title>
+        <style>
+          .explore-container {
+            margin-left:220px; position:relative; height:100vh; overflow:hidden;
+          }
+          video {
+            width:100%; height:100vh; object-fit:cover;
+          }
+          .controls {
+            position:absolute; right:20px; top:50%; transform:translateY(-50%);
+            display:flex; flex-direction:column; gap:16px;
+          }
+          .controls button {
+            width:48px; height:48px; border:none; border-radius:24px;
+            background:rgba(255,255,255,0.9); display:flex;
+            align-items:center; justify-content:center;
+            font-size:1.2em; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2);
+          }
+          .arrow {
+            position:absolute; right:20px; width:48px; height:48px;
+            background:rgba(255,255,255,0.9); border-radius:24px;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.2);
+          }
+          .up { top:10%; }
+          .down { bottom:10%; }
+        </style>
+      </head>
+      <body>
+        {%% include 'sidebar' %%}
+        <div class="explore-container">
+          <!-- show the first video for demo; hook into scroll JS to swap them -->
+          <video autoplay muted loop>
+            <source src="{{ url_for('uploaded_file', filename=videos[0].filename) }}" type="video/mp4">
+          </video>
+          <div class="controls">
+            <button title="Like">❤️</button>
+            <button title="Comment">💬</button>
+            <button title="Share">🔗</button>
+            <button title="Bookmark">🔖</button>
           </div>
-        {% endfor %}
-        <br>
-        <a href="{{ url_for('home') }}" style="color:#fff; text-decoration:none;">Back to Home</a>
-      </div>
-    </body>
+          <div class="arrow up">⬆️</div>
+          <div class="arrow down">⬇️</div>
+        </div>
+      </body>
     </html>
     """
     explore_html = explore_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(explore_html, videos=videos)
+
 
 # ----- FOLLOWING (Placeholder) Page -----
 @app.route('/following')
@@ -491,205 +438,77 @@ def upload():
     return render_template_string(upload_html)
 
 # ----- LIVESTREAM (Exact TikTok-style copy) -----
-@app.route('/livestream', methods=['GET', 'POST'])
+@app.route('/livestream', methods=['GET','POST'])
 @login_required
 def livestream():
-    if request.method == 'POST':
-        title = request.form.get('title')
-        if not title:
-            flash("Please provide a livestream title.", "danger")
-            return redirect(url_for('livestream'))
-        dummy_filename = "livestream_" + secure_filename(title) + ".mp4"
-        new_video = Video(title=title, filename=dummy_filename, user_id=current_user.id, is_livestream=True)
-        db.session.add(new_video)
-        db.session.commit()
-        flash("Livestream recorded successfully (simulation)!", "success")
-        return redirect(url_for('profile'))
+    # … keep your POST logic …
     livestream_html = """
     <!DOCTYPE html>
     <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>Live</title>
-      <style>
-        body {
-          margin: 0;
-          padding: 0;
-          font-family: 'Proxima Nova', Arial, sans-serif;
-          background: #fff;
-          color: #000;
-        }
-        .main-container {
-          margin-left: 220px;
-          display: flex;
-          min-height: 100vh;
-        }
-        .live-center {
-          flex: 1;
-          padding: 20px;
-          background: #fff;
-        }
-        .live-center h2 {
-          text-align: left;
-          margin-top: 0;
-        }
-        .live-form {
-          margin-bottom: 20px;
-          text-align: left;
-        }
-        .live-form input[type="text"] {
-          padding: 10px;
-          margin-bottom: 10px;
-          width: 100%;
-          max-width: 300px;
-        }
-        .live-buttons {
-          display: flex;
-          gap: 10px;
-          margin-top: 10px;
-        }
-        .live-buttons button {
-          padding: 10px 20px;
-          background: #fe2c55;
-          color: #fff;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-weight: bold;
-        }
-        .live-buttons button:hover {
-          background: #ff527c;
-        }
-        .live-video-container {
-          width: 100%;
-          max-width: 700px;
-          margin: 0 auto;
-          background: #000;
-          position: relative;
-        }
-        .live-video-container video {
-          width: 100%;
-          height: auto;
-          background: #000;
-        }
-        .live-right {
-          width: 320px;
-          background: #f8f8f8;
-          border-left: 1px solid #ccc;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          justify-content: space-between;
-        }
-        .login-box {
-          background: #fff;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          padding: 20px;
-          text-align: center;
-          margin-bottom: 20px;
-        }
-        .login-box h3 {
-          margin: 0 0 10px 0;
-          font-size: 1.1em;
-        }
-        .login-button {
-          padding: 10px 20px;
-          background: #fe2c55;
-          color: #fff;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-weight: bold;
-        }
-        .login-button:hover {
-          background: #ff527c;
-        }
-        .chat-header {
-          font-weight: bold;
-          margin-bottom: 10px;
-          text-align: left;
-        }
-        .comment-feed {
-          flex: 1;
-          overflow-y: auto;
-          border: 1px solid #ccc;
-          border-radius: 6px;
-          padding: 10px;
-          background: #fff;
-        }
-        .comment-item {
-          margin-bottom: 10px;
-          font-size: 0.9em;
-          line-height: 1.4em;
-        }
-        .right-footer {
-          margin-top: 20px;
-          text-align: center;
-          font-size: 0.85em;
-          color: #999;
-        }
-      </style>
-    </head>
-    <body>
-      {%% include 'sidebar' %%}
-      <div class="main-container">
-        <div class="live-center">
-          <h2>Live</h2>
-          <div class="live-form">
-            <form id="liveForm" method="POST" style="margin-bottom:0;">
-              <input type="text" name="title" placeholder="Livestream Title" required>
-              <div class="live-buttons">
-                <button type="button" id="startBtn">Start Livestream Preview</button>
-              </div>
-            </form>
-          </div>
-          <div class="live-video-container">
+      <head>
+        <meta charset="UTF-8">
+        <title>LIVE · Desibeatz</title>
+        <style>
+          .wrapper { display:flex; margin-left:220px; height:100vh; }
+          .left { flex:2; padding:20px; }
+          .left video {
+            width:100%; height:calc(100vh - 80px); background:#000; border-radius:8px;
+          }
+          .right { width:320px; background:#f8f8f8; border-left:1px solid #eee;
+            display:flex; flex-direction:column; padding:20px;
+          }
+          .login-box {
+            background:#fff; border:1px solid #ddd; border-radius:6px;
+            padding:20px; text-align:center; margin-bottom:20px;
+          }
+          .login-box button {
+            background:#fe2c55; color:#fff; border:none;
+            padding:8px 20px; border-radius:4px; cursor:pointer;
+          }
+          .chat-header { font-weight:bold; margin-bottom:10px; }
+          .chat-feed {
+            flex:1; overflow-y:auto; background:#fff;
+            border-radius:6px; border:1px solid #ddd; padding:10px;
+          }
+          .chat-item { margin-bottom:12px; font-size:0.9em; }
+          .footer { text-align:center; color:#999; font-size:0.8em; margin-top:20px; }
+        </style>
+      </head>
+      <body>
+        {%% include 'sidebar' %%}
+        <div class="wrapper">
+          <div class="left">
+            <h2>Live</h2>
             <video id="liveVideo" autoplay muted></video>
           </div>
-        </div>
-        <div class="live-right">
-          <div>
+          <div class="right">
             <div class="login-box">
               <h3>Log in for full experience</h3>
-              <p>Log in to follow creators, like videos, and view comments.</p>
-              <button class="login-button" onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
+              <p>Follow creators, like videos & view comments.</p>
+              <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
             </div>
-            <div class="chat-header">Chat</div>
-            <div class="comment-feed" id="chatFeed">
-              <div class="comment-item"><strong>User1:</strong> This is so cool!</div>
-              <div class="comment-item"><strong>User2:</strong> Wow, amazing stream</div>
-              <div class="comment-item"><strong>User3:</strong> Hello from NYC</div>
+            <div class="chat-header">LIVE chat</div>
+            <div class="chat-feed">
+              <div class="chat-item"><strong>User1:</strong> This is so cool!</div>
+              <div class="chat-item"><strong>User2:</strong> Wow, amazing stream</div>
+              <div class="chat-item"><strong>User3:</strong> Hello from NYC</div>
             </div>
-          </div>
-          <div class="right-footer">
-            © 2023 Desibeatz
+            <div class="footer">© 2025 Desibeatz</div>
           </div>
         </div>
-      </div>
-      <script>
-        const startBtn = document.getElementById('startBtn');
-        const liveVideo = document.getElementById('liveVideo');
-        startBtn.addEventListener('click', async () => {
-          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            try {
-              const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-              liveVideo.srcObject = stream;
-              startBtn.disabled = false;
-              startBtn.innerText = "Stop Livestream";
-            } catch (error) {
-              alert("Error accessing camera/microphone: " + error);
-            }
-          } else {
-            alert("getUserMedia not supported in this browser.");
-          }
-        });
-      </script>
-    </body>
+        <script>
+          const liveVideo = document.getElementById('liveVideo');
+          document.getElementById('startBtn')?.addEventListener('click', async ()=>{
+            const stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+            liveVideo.srcObject = stream;
+          });
+        </script>
+      </body>
     </html>
     """
     livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(livestream_html)
+
 
 # ----- LIKE & BOOKMARK -----
 @app.route('/like/<int:video_id>')
@@ -715,240 +534,72 @@ def toggle_bookmark(video_id):
     return redirect(request.referrer or url_for('explore'))
 
 # ----- PROFILE (Editable TikTok-Style for Current User) -----
-@app.route('/profile', methods=['GET', 'POST'])
+@app.route('/profile', methods=['GET','POST'])
 @login_required
 def profile():
-    if request.method == 'POST':
-        bio = request.form.get('bio')
-        current_user.bio = bio or ""
-        if 'profile_picture' in request.files:
-            file = request.files['profile_picture']
-            if file and file.filename != '':
-                filename = secure_filename(file.filename)
-                file_ext = filename.rsplit('.', 1)[1].lower()
-                if file_ext in ALLOWED_IMAGE_EXTENSIONS:
-                    file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                    current_user.profile_picture = filename
-                else:
-                    flash("Invalid image file.", "danger")
-                    return redirect(url_for('profile'))
-        db.session.commit()
-        flash("Profile updated successfully!", "success")
-        return redirect(url_for('profile'))
-
-    user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
-    following_count = 72
-    followers_count = "58.3M"
-    likes_count = "631.9M"
+    # … keep your POST logic …
     profile_html = """
     <!DOCTYPE html>
     <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>{{ current_user.username }}'s Profile</title>
-      <style>
-        body {
-          background: #f8f8f8;
-          margin: 0;
-          padding: 0;
-          font-family: 'Proxima Nova', Arial, sans-serif;
-        }
-        .main-content {
-          margin-left: 220px;
-          min-height: 100vh;
-          background: #fff;
-          color: #000;
-          padding: 20px;
-          position: relative;
-        }
-        .profile-header {
-          display: flex;
-          align-items: center;
-          margin-bottom: 20px;
-          border-bottom: 1px solid #ccc;
-          padding-bottom: 20px;
-        }
-        .avatar {
-          width: 100px;
-          height: 100px;
-          border-radius: 50%;
-          object-fit: cover;
-          background: #000;
-          margin-right: 20px;
-        }
-        .profile-info {
-          flex: 1;
-        }
-        .display-name {
-          font-size: 1.4em;
-          font-weight: bold;
-          margin: 0;
-        }
-        .username-handle {
-          color: #666;
-          font-size: 0.9em;
-          margin-top: 5px;
-        }
-        .stats-row {
-          display: flex;
-          gap: 25px;
-          margin-top: 10px;
-        }
-        .stat-item strong {
-          display: block;
-          font-size: 1.2em;
-          color: #000;
-        }
-        .follow-button {
-          background: #fe2c55;
-          color: #fff;
-          border: none;
-          padding: 8px 20px;
-          border-radius: 4px;
-          font-weight: bold;
-          cursor: pointer;
-          margin-top: 10px;
-        }
-        .follow-button:hover {
-          background: #ff527c;
-        }
-        .bio-text {
-          margin-top: 10px;
-          color: #333;
-          font-size: 0.9em;
-        }
-        .edit-profile-form {
-          margin-top: 10px;
-        }
-        .edit-profile-form label {
-          font-size: 0.85em;
-          color: #333;
-        }
-        /* hide native file input, style label */
-        input[type="file"] { display: none; }
-        .file-input-label {
-          display: inline-block;
-          background: #fe2c55;
-          color: #fff;
-          padding: 6px 10px;
-          border-radius: 4px;
-          cursor: pointer;
-          margin-top: 6px;
-        }
-        .file-input-label:hover {
-          background: #ff527c;
-        }
-        .videos-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-          gap: 10px;
-          margin-top: 20px;
-        }
-        .video-card {
-          background: #f9f9f9;
-          border: 1px solid #eee;
-          border-radius: 4px;
-          overflow: hidden;
-          text-align: center;
-          padding: 10px;
-        }
-        .video-card video {
-          width: 100%;
-          border: none;
-          background: #000;
-          margin-bottom: 8px;
-        }
-        .video-title {
-          font-weight: bold;
-          color: #333;
-          margin-bottom: 5px;
-          font-size: 0.9em;
-          overflow: hidden;
-          white-space: nowrap;
-          text-overflow: ellipsis;
-        }
-        .video-timestamp {
-          font-size: 0.75em;
-          color: #999;
-        }
-        .upload-button {
-          position: absolute;
-          right: 20px;
-          top: 20px;
-          background: #fe2c55;
-          color: #fff;
-          border: none;
-          padding: 8px 20px;
-          border-radius: 4px;
-          font-weight: bold;
-          cursor: pointer;
-        }
-        .upload-button:hover {
-          background: #ff527c;
-        }
-      </style>
-    </head>
-    <body>
-      {%% include 'sidebar' %%}
-      <div class="main-content">
-        <a href="{{ url_for('upload') }}" class="upload-button">Upload</a>
-        <div class="profile-header">
-          <img class="avatar" src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Profile Picture">
-          <div class="profile-info">
-            <h2 class="display-name">{{ current_user.username }}</h2>
-            <div class="username-handle">@{{ current_user.username }}</div>
-            <div class="stats-row">
-              <div class="stat-item"><strong>{{ following_count }}</strong> Following</div>
-              <div class="stat-item"><strong>{{ followers_count }}</strong> Followers</div>
-              <div class="stat-item"><strong>{{ likes_count }}</strong> Likes</div>
+      <head>
+        <meta charset="UTF-8">
+        <title>{{ current_user.username }} · Profile</title>
+        <style>
+          .content { margin-left:220px; padding:20px; background:#fff; }
+          .header { display:flex; gap:30px; align-items:center;
+                    border-bottom:1px solid #eee; padding-bottom:20px; }
+          .avatar { width:120px; height:120px; border-radius:50%; object-fit:cover; }
+          .info { flex:1; }
+          .info h1 { margin:0; font-size:1.8em; }
+          .info .handle { color:#555; margin:8px 0; }
+          .stats { display:flex; gap:40px; margin-bottom:12px; }
+          .stats div strong { display:block; font-size:1.2em; }
+          .follow-btn {
+            background:#fe2c55; color:#fff; border:none;
+            padding:8px 20px; border-radius:4px; cursor:pointer; font-weight:bold;
+          }
+          .grid {
+            display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+            gap:10px; margin-top:20px;
+          }
+          .grid video { width:100%; border-radius:6px; }
+        </style>
+      </head>
+      <body>
+        {%% include 'sidebar' %%}
+        <div class="content">
+          <div class="header">
+            <img class="avatar" src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}">
+            <div class="info">
+              <h1>{{ current_user.username }}</h1>
+              <div class="handle">@{{ current_user.username }}</div>
+              <div class="stats">
+                <div><strong>72</strong> Following</div>
+                <div><strong>58.3M</strong> Followers</div>
+                <div><strong>631.9M</strong> Likes</div>
+              </div>
+              <button class="follow-btn" disabled>Edit Profile</button>
             </div>
-            <button class="follow-button" disabled>Edit Profile</button>
-            <div class="bio-text">{{ current_user.bio }}</div>
-            <form method="POST" enctype="multipart/form-data" class="edit-profile-form">
-              <label>Update Bio:</label>
-              <textarea name="bio" rows="2">{{ current_user.bio }}</textarea>
-              <label for="profile_picture" class="file-input-label">Change Profile Picture</label>
-              <input type="file" id="profile_picture" name="profile_picture" accept=".png,.jpg,.jpeg,.gif">
-              <button type="submit" style="background:#fe2c55; color:#fff; border:none; border-radius:4px; padding:5px 15px; cursor:pointer;">Save</button>
-            </form>
+          </div>
+          <div class="grid">
+            {% for vid in user_videos %}
+              <video controls>
+                <source src="{{ url_for('uploaded_file',filename=vid.filename) }}" type="video/mp4">
+              </video>
+            {% else %}
+              <p style="grid-column:1/-1; text-align:center; color:#888;">No videos yet.</p>
+            {% endfor %}
           </div>
         </div>
-        <div class="videos-grid">
-          {% for vid in user_videos %}
-            <div class="video-card">
-              {% set ext = vid.filename.rsplit('.', 1)[1].lower() %}
-              {% if ext == 'mp4' %}
-                {% set mime = 'video/mp4' %}
-              {% elif ext == 'mov' %}
-                {% set mime = 'video/quicktime' %}
-              {% elif ext == 'avi' %}
-                {% set mime = 'video/x-msvideo' %}
-              {% else %}
-                {% set mime = 'video/mp4' %}
-              {% endif %}
-              <video controls>
-                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="{{ mime }}">
-                Your browser does not support the video tag.
-              </video>
-              <p class="video-title">{{ vid.title }}</p>
-              <p class="video-timestamp">{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}</p>
-            </div>
-          {% else %}
-            <p style="grid-column: 1 / -1; text-align: center; color: #666;">No videos uploaded yet.</p>
-          {% endfor %}
-        </div>
-      </div>
-    </body>
+      </body>
     </html>
     """
     profile_html = profile_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(
-        profile_html,
-        following_count=following_count,
-        followers_count=followers_count,
-        likes_count=likes_count,
-        user_videos=user_videos
+      profile_html,
+      user_videos=Video.query.filter_by(user_id=current_user.id).all()
     )
+
 
 # ----- PUBLIC PROFILE (by username) -----
 @app.route('/<username>')
