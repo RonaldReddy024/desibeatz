@@ -221,11 +221,12 @@ def home():
         <div class="video-feed">
           {% for vid in videos %}
           <div class="video-card">
-  {# video preview removed #}
-  <div class="video-info">
-    <strong>{{ vid.title }}</strong><br>
-    Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
-  </div>
+ <div class="video-feed">
+  {% for vid in videos %}
+    {# no card, no info, nothing #}
+  {% else %}
+    <p style="color:#fff; text-align:center; margin-top:40px;">No videos available.</p>
+  {% endfor %}
 </div>
 
           {% endfor %}
