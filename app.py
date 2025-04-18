@@ -241,63 +241,69 @@ def home():
 @app.route('/explore')
 def explore():
     videos = Video.query.order_by(Video.timestamp.desc()).all()
-    explore_html = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Explore - Desibeatz</title>
-  <style>
-    body { margin:0; padding:0; background:#000; color:#fff; }
-    .sidebar { /* your sidebar CSS */ }
-    .main-content { margin-left:220px; padding:20px; }
-    .video-feed {
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-      gap:20px;
-    }
-    .video-card video {
-      width:100%; border-radius:6px; background:#000;
-    }
-    .video-info {
-      margin-top:8px; font-size:0.9em;
-    }
-    .live-badge {
-      color:#fe2c55; font-weight:bold; margin-right:6px;
-    }
-  </style>
-</head>
-<body>
-  {%% include 'sidebar' %%}
-  <div class="main-content">
-    <h2>Explore</h2>
-    <div class="video-feed">
-      {% for vid in videos %}
-        <div class="video-card">
-          {% set ext = vid.filename.rsplit('.',1)[1].lower() %}
-          {% set mime = {
-               'mp4':'video/mp4',
-               'mov':'video/quicktime',
-               'avi':'video/x-msvideo'
-             }.get(ext,'video/mp4') %}
-          <video controls>
-            <source src="{{ url_for('uploaded_file',filename=vid.filename) }}" type="{{ mime }}">
-          </video>
-          <div class="video-info">
-            {% if vid.is_livestream %}
-              <span class="live-badge">● LIVE</span>
-            {% endif %}
-            <strong>{{ vid.title }}</strong> - {{ vid.uploader.username }}
-            <br>{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
-          </div>
+    explore_html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Explore · Desibeatz</title>
+      <style>
+        body { margin:0; padding:0; background:#000; color:#fff; }
+        .main-content { margin-left:220px; padding:20px; }
+        .video-feed {
+          display:grid;
+          grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+          gap:20px;
+        }
+        .video-card { position:relative; }
+        .video-card video {
+          width:100%; border-radius:6px; background:#000;
+        }
+        .video-info {
+          margin-top:8px; font-size:0.9em;
+        }
+        .live-badge {
+          position:absolute; top:8px; left:8px;
+          background:rgba(255,0,0,0.8); color:#fff;
+          padding:2px 6px; border-radius:4px;
+          font-size:0.8em; font-weight:bold;
+        }
+      </style>
+    </head>
+    <body>
+      {{ sidebar|safe }}
+      <div class="main-content">
+        <h2>Explore</h2>
+        <div class="video-feed">
+          {% for vid in videos %}
+            {% set ext = vid.filename.rsplit('.',1)[1].lower() %}
+            {% set mime = {
+                 'mp4':'video/mp4',
+                 'mov':'video/quicktime',
+                 'avi':'video/x-msvideo'
+               }.get(ext,'video/mp4') %}
+            <div class="video-card">
+              <video controls>
+                <source src="{{ url_for('uploaded_file',filename=vid.filename) }}" type="{{ mime }}">
+              </video>
+              {% if vid.is_livestream %}
+                <div class="live-badge">● LIVE</div>
+              {% endif %}
+              <div class="video-info">
+                <strong>{{ vid.title }}</strong> · {{ vid.uploader.username }}<br>
+                {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
+              </div>
+            </div>
+          {% else %}
+            <p>No videos to explore.</p>
+          {% endfor %}
         </div>
-      {% else %}
-        <p>No videos to explore.</p>
-      {% endfor %}
-    </div>
-  </div>
-</body>
-</html>'''
-    explore_html = explore_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+      </div>
+    </body>
+    </html>
+    """
+    # inject sidebar
+    explore_html = explore_html.replace("{{ sidebar|safe }}", sidebar_template)
     return render_template_string(explore_html, videos=videos)
 
 
@@ -554,90 +560,65 @@ def toggle_bookmark(video_id):
 @app.route('/profile')
 @login_required
 def profile():
-    # … your profile_html rendering 
     user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
     profile_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>{{ current_user.username }} - Profile</title>
+      <title>{{ current_user.username }} · Profile</title>
       <style>
         body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; color:#000; }
-        .sidebar { /* same sidebar CSS */ }
-        .content {
-          margin-left: 220px;
-          padding: 20px;
-        }
-        .header {
-          display: flex; gap: 30px; align-items: center;
-          border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px;
-        }
-        .avatar {
-          width: 120px; height: 120px; border-radius: 50%; object-fit: cover;
-        }
-        .info { flex: 1; }
-        .info h1 { margin: 0; font-size: 1.8em; }
-        .info .handle { color: #555; margin: 8px 0; }
-        .stats {
-          display: flex; gap: 40px; margin-bottom: 12px;
-        }
-        .stats div strong { display: block; font-size: 1.2em; }
-        .edit-btn {
-          background: #fe2c55; color: #fff; border: none;
-          padding: 8px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;
-        }
+        .content { margin-left:220px; padding:20px; }
+        .header { display:flex; gap:30px; align-items:center; margin-bottom:20px; }
+        .avatar { width:120px; height:120px; border-radius:50%; object-fit:cover; }
+        .info h1 { margin:0; font-size:1.8em; }
         .grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
-          gap: 10px;
+          display:grid;
+          grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+          gap:10px;
         }
-        .grid video { width: 100%; height: auto; border-radius: 6px; }
+        .video-thumb { position:relative; }
+        .video-thumb video {
+          width:100%; border-radius:6px;
+        }
+        .live-overlay {
+          position:absolute; top:8px; left:8px;
+          background:rgba(255,0,0,0.8); color:#fff;
+          padding:2px 6px; border-radius:4px;
+          font-size:0.8em; font-weight:bold;
+        }
       </style>
     </head>
     <body>
-      {%% include 'sidebar' %%}
+      {{ sidebar|safe }}
       <div class="content">
         <div class="header">
           <img class="avatar" src="{{ url_for('uploaded_file', filename=current_user.profile_picture) }}" alt="Avatar">
           <div class="info">
             <h1>{{ current_user.username }}</h1>
             <div class="handle">@{{ current_user.username }}</div>
-            <div class="stats">
-              <div><strong>72</strong> Following</div>
-              <div><strong>58.3M</strong> Followers</div>
-              <div><strong>631.9M</strong> Likes</div>
-            </div>
-            <button class="edit-btn" disabled>Edit Profile</button>
           </div>
         </div>
         <div class="grid">
           {% for vid in user_videos %}
-  <div class="video-thumb"
-       style="position:relative; display:inline-block; margin:8px;">
-    <video src="{{ url_for('uploaded_file',filename=vid.filename) }}"
-           controls
-           style="width:160px; border-radius:6px;">
-    </video>
-    {% if vid.is_livestream %}
-      <div style="
-        position:absolute; top:8px; left:8px;
-        background:rgba(255,0,0,0.8);
-        color:#fff; padding:2px 6px;
-        border-radius:4px; font-size:0.8em;">
-        LIVE
-      </div>
-    {% endif %}
-  </div>
-{% else %}
-  <p>No videos yet.</p>
-{% endfor %}
+            <div class="video-thumb">
+              <video controls>
+                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+              </video>
+              {% if vid.is_livestream %}
+                <div class="live-overlay">LIVE</div>
+              {% endif %}
+            </div>
+          {% else %}
+            <p style="grid-column:1/-1; text-align:center; color:#888;">No videos yet.</p>
+          {% endfor %}
         </div>
       </div>
     </body>
     </html>
     """
-    profile_html = profile_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+    profile_html = profile_html.replace("{{ sidebar|safe }}", sidebar_template)
     return render_template_string(profile_html, user_videos=user_videos)
 
 
