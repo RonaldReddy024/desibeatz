@@ -246,19 +246,25 @@ def explore():
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Explore - Desibeatz</title>
+  <title>Explore · Desibeatz</title>
   <style>
     body { margin:0; padding:0; background:#000; color:#fff; }
-    .sidebar { /* … */ }
+    .sidebar { /* your sidebar CSS */ }
     .main-content { margin-left:220px; padding:20px; }
     .video-feed {
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
       gap:20px;
     }
-    .video-card video { width:100%; border-radius:6px; }
-    .video-info { margin-top:8px; font-size:0.9em; }
-    .live-badge { color:#fe2c55; font-weight:bold; margin-right:6px; }
+    .video-card video {
+      width:100%; border-radius:6px; background:#000;
+    }
+    .video-info {
+      margin-top:8px; font-size:0.9em;
+    }
+    .live-badge {
+      color:#fe2c55; font-weight:bold; margin-right:6px;
+    }
   </style>
 </head>
 <body>
@@ -270,7 +276,8 @@ def explore():
         <div class="video-card">
           {% set ext = vid.filename.rsplit('.',1)[1].lower() %}
           {% set mime = {
-               'mp4':'video/mp4','mov':'video/quicktime',
+               'mp4':'video/mp4',
+               'mov':'video/quicktime',
                'avi':'video/x-msvideo'
              }.get(ext,'video/mp4') %}
           <video controls>
@@ -421,9 +428,9 @@ def upload():
     upload_html = upload_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(upload_html)
 
-# ----- LIVESTREAM (Exact TikTok-style copy) -----
 from flask import jsonify
 
+# ----- LIVESTREAM (Start/Stop toggle + save on stop) -----
 @app.route('/livestream', methods=['GET','POST'])
 @login_required
 def livestream():
@@ -443,43 +450,57 @@ def livestream():
         db.session.add(vid)
         db.session.commit()
 
-        # JS wants 204 to stay on page
+        # JS expects a 204 No Content so we stay on the page
         return ('', 204)
 
-    # GET: render the toggle page
+    # GET → render the toggle page
     livestream_html = '''<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>LIVE - Desibeatz</title>
+  <title>LIVE · Desibeatz</title>
   <style>
     body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; }
     .sidebar { /* your sidebar CSS */ }
 
     .wrapper { display:flex; margin-left:220px; height:100vh; }
     .left { flex:2; padding:20px; display:flex; flex-direction:column; }
-    .left video { flex:1; border-radius:8px; background:#000; margin-top:10px; }
+    .left video { flex:1; background:#000; border-radius:8px; margin-top:10px; }
 
+    /* Start/Stop button styles */
     .start-btn, .stop-btn {
-      padding:10px 20px; border-radius:4px; font-weight:bold;
-      cursor:pointer; margin-bottom:10px; align-self:start;
+      padding:10px 20px;
+      border-radius:4px;
+      font-weight:bold;
+      cursor:pointer;
+      margin-bottom:10px;
+      align-self:flex-start;
     }
     .start-btn {
-      background:#fe2c55; color:#fff; border:2px solid #000;
+      background:#fe2c55;
+      color:#fff;
+      border:2px solid #000;
     }
     .start-btn:hover { background:#ff6699; }
+
     .stop-btn {
-      background:#000; color:#fe2c55; border:2px solid #fe2c55;
+      background:#000;
+      color:#fe2c55;
+      border:2px solid #fe2c55;
     }
     .stop-btn:hover { background:#333; }
 
     .right {
-      width:320px; background:#f8f8f8; border-left:1px solid #eee;
-      padding:20px; display:flex; flex-direction:column; color:#000;
+      width:320px;
+      background:#f8f8f8;
+      border-left:1px solid #eee;
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      color:#000;
     }
-    /* force black text in these boxes */
     .login-box, .chat-feed { color:#000; }
-    /* …existing login-box/chat-feed CSS… */
+    /* …your existing login-box and chat-feed styling… */
   </style>
 </head>
 <body>
@@ -511,27 +532,33 @@ def livestream():
             vid = document.getElementById('liveVideo');
       let stream;
       btn.addEventListener('click', async ()=>{
-        const live = btn.dataset.live==='true';
+        const live = btn.dataset.live === 'true';
+
         if (!live) {
-          // START
+          // ── START ──
           stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
           vid.srcObject = stream;
-          btn.textContent  = 'Stop Livestream';
-          btn.className   = 'stop-btn';
-          btn.dataset.live= 'true';
+          btn.textContent   = 'Stop Livestream';
+          btn.className     = 'stop-btn';
+          btn.dataset.live  = 'true';
+
         } else {
-          // STOP
+          // ── STOP ──
           stream.getTracks().forEach(t=>t.stop());
           vid.srcObject = null;
+
+          // Save to server
           const now = new Date().toISOString().slice(0,16).replace('T',' ');
           await fetch('{{ url_for("livestream") }}', {
-            method:'POST',
+            method: 'POST',
             headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({title:`Livestream at ${now}`})
+            body: JSON.stringify({title:`Livestream at ${now}`})
           });
-          btn.textContent  = 'Start Livestream';
-          btn.className   = 'start-btn';
-          btn.dataset.live= 'false';
+
+          // Reset UI
+          btn.textContent   = 'Start Livestream';
+          btn.className     = 'start-btn';
+          btn.dataset.live  = 'false';
         }
       });
     })();
@@ -540,7 +567,6 @@ def livestream():
 </html>'''
     livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(livestream_html)
-
 
 # ----- LIKE & BOOKMARK -----
 @app.route('/like/<int:video_id>')
