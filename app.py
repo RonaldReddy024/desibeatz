@@ -633,7 +633,7 @@ def profile():
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>{{ current_user.username }} · Profile</title>
+      <title>{{ current_user.username }} - Profile</title>
       <style>
         body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; color:#000; }
         .sidebar { /* same sidebar CSS */ }
