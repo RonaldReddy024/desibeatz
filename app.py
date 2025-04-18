@@ -241,66 +241,62 @@ def home():
 @app.route('/explore')
 def explore():
     videos = Video.query.order_by(Video.timestamp.desc()).all()
-    explore_html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>Explore · Desibeatz</title>
-      <style>
-        body { margin:0; padding:0; background:#000; color:#fff; }
-        .sidebar { /* …your sidebar CSS… */ }
-        .main-content { margin-left:220px; padding:20px; }
-        .video-feed {
-          display:grid;
-          grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-          gap:20px;
-        }
-        .video-card video {
-          width:100%; border-radius:6px; background:#000;
-        }
-        .video-info {
-          margin-top:8px; font-size:0.9em;
-        }
-        .live-badge {
-          color:#fe2c55;
-          font-weight:bold;
-          margin-right:6px;
-        }
-      </style>
-    </head>
-    <body>
-      {%% include 'sidebar' %%}
-      <div class="main-content">
-        <h2>Explore</h2>
-        <div class="video-feed">
-          {% for vid in videos %}
-            <div class="video-card">
-              {% set ext = vid.filename.rsplit('.',1)[1].lower() %}
-              {% set mime = {
-                   'mp4':'video/mp4',
-                   'mov':'video/quicktime',
-                   'avi':'video/x-msvideo'
-                 }.get(ext,'video/mp4') %}
-              <video controls>
-                <source src="{{ url_for('uploaded_file',filename=vid.filename) }}" type="{{ mime }}">
-              </video>
-              <div class="video-info">
-                {% if vid.is_livestream %}
-                  <span class="live-badge">● LIVE</span>
-                {% endif %}
-                <strong>{{ vid.title }}</strong> · {{ vid.uploader.username }}
-                <br>{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
-              </div>
-            </div>
-          {% else %}
-            <p>No videos to explore.</p>
-          {% endfor %}
+    explore_html = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Explore - Desibeatz</title>
+  <style>
+    body { margin:0; padding:0; background:#000; color:#fff; }
+    .sidebar { /* your sidebar CSS */ }
+    .main-content { margin-left:220px; padding:20px; }
+    .video-feed {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+      gap:20px;
+    }
+    .video-card video {
+      width:100%; border-radius:6px; background:#000;
+    }
+    .video-info {
+      margin-top:8px; font-size:0.9em;
+    }
+    .live-badge {
+      color:#fe2c55; font-weight:bold; margin-right:6px;
+    }
+  </style>
+</head>
+<body>
+  {%% include 'sidebar' %%}
+  <div class="main-content">
+    <h2>Explore</h2>
+    <div class="video-feed">
+      {% for vid in videos %}
+        <div class="video-card">
+          {% set ext = vid.filename.rsplit('.',1)[1].lower() %}
+          {% set mime = {
+               'mp4':'video/mp4',
+               'mov':'video/quicktime',
+               'avi':'video/x-msvideo'
+             }.get(ext,'video/mp4') %}
+          <video controls>
+            <source src="{{ url_for('uploaded_file',filename=vid.filename) }}" type="{{ mime }}">
+          </video>
+          <div class="video-info">
+            {% if vid.is_livestream %}
+              <span class="live-badge">● LIVE</span>
+            {% endif %}
+            <strong>{{ vid.title }}</strong> - {{ vid.uploader.username }}
+            <br>{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
+          </div>
         </div>
-      </div>
-    </body>
-    </html>
-    """
+      {% else %}
+        <p>No videos to explore.</p>
+      {% endfor %}
+    </div>
+  </div>
+</body>
+</html>'''
     explore_html = explore_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(explore_html, videos=videos)
 
@@ -558,13 +554,14 @@ def toggle_bookmark(video_id):
 @app.route('/profile')
 @login_required
 def profile():
+    # … your profile_html rendering 
     user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
     profile_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>{{ current_user.username }} · Profile</title>
+      <title>{{ current_user.username }} - Profile</title>
       <style>
         body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; color:#000; }
         .sidebar { /* same sidebar CSS */ }
@@ -615,35 +612,27 @@ def profile():
           </div>
         </div>
         <div class="grid">
-        <style>
-  .video-thumb { position:relative; display:inline-block; margin:8px; }
-  .live-overlay {
-    position:absolute;
-    top:8px; left:8px;
-    background:rgba(255,0,0,0.8);
-    color:#fff;
-    padding:2px 6px;
-    border-radius:4px;
-    font-size:0.8em;
-  }
-</style>
-
-<div class="grid">
-  {% for vid in user_videos %}
-    <div class="video-thumb">
-      <video
-        src="{{ url_for('uploaded_file', filename=vid.filename) }}"
-        controls
-        style="width:160px; border-radius:6px;">
-      </video>
-      {% if vid.is_livestream %}
-        <div class="live-overlay">LIVE</div>
-      {% endif %}
-    </div>
-  {% else %}
-    <p style="grid-column:1/-1; text-align:center; color:#888;">No videos yet.</p>
-  {% endfor %}
-</div>
+          {% for vid in user_videos %}
+  <div class="video-thumb"
+       style="position:relative; display:inline-block; margin:8px;">
+    <video src="{{ url_for('uploaded_file',filename=vid.filename) }}"
+           controls
+           style="width:160px; border-radius:6px;">
+    </video>
+    {% if vid.is_livestream %}
+      <div style="
+        position:absolute; top:8px; left:8px;
+        background:rgba(255,0,0,0.8);
+        color:#fff; padding:2px 6px;
+        border-radius:4px; font-size:0.8em;">
+        LIVE
+      </div>
+    {% endif %}
+  </div>
+{% else %}
+  <p>No videos yet.</p>
+{% endfor %}
+        </div>
       </div>
     </body>
     </html>
