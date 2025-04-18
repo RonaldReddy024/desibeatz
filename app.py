@@ -435,8 +435,8 @@ from flask import jsonify
 # simple chat store
 chat_messages = []
 
-@app.route('/chat', methods=['GET','POST'])
-def chat():
+@app.route('/live_chat', methods=['GET', 'POST'])
+def live_chat():
     if request.method == 'POST':
         data = request.get_json() or {}
         user = current_user.username if current_user.is_authenticated else 'Anonymous'
