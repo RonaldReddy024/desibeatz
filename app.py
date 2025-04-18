@@ -433,16 +433,15 @@ from flask import jsonify
 # ----- LIVESTREAM (Start/Stop toggle + save on stop) -----
 from flask import jsonify
 
-@app.route('/livestream', methods=['GET','POST'])
+@app.route('/livestream', methods=['GET', 'POST'])
 @login_required
 def livestream():
+    # ── STOP event: save the stream to the DB ──
     if request.method == 'POST':
-        # Accept JSON (from JS) or form data
         data = request.get_json(silent=True) or request.form
         title = data.get('title', 'Untitled Livestream')
         filename = "livestream_" + secure_filename(title) + ".mp4"
 
-        # Save livestream record
         vid = Video(
             title=title,
             filename=filename,
@@ -452,39 +451,107 @@ def livestream():
         db.session.add(vid)
         db.session.commit()
 
-        # JS expects 204 No Content
+        # Return 204 so JS stays on this page
         return ('', 204)
 
-    # GET → render the toggle page
-    livestream_html = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>LIVE - Desibeatz</title>
-  <style>
-    /* … your CSS … */
-  </style>
-</head>
-<body>
-  {%% include 'sidebar' %%}
-  <div class="wrapper">
-    <div class="left">
-      <button id="liveToggleBtn" class="start-btn" data-live="false">
-        Start Livestream
-      </button>
-      <video id="liveVideo" autoplay muted></video>
-    </div>
-    <div class="right">
-      <!-- login box & chat feed -->
-    </div>
-  </div>
-  <script>
-    /* … your toggle script … */
-  </script>
-</body>
-</html>'''
+    # ── GET event: render the toggle page ──
+    livestream_html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>LIVE - Desibeatz</title>
+      <style>
+        body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; }
+        .sidebar { /* …your sidebar CSS… */ }
+
+        .wrapper { display:flex; margin-left:220px; height:100vh; }
+        .left { flex:2; padding:20px; display:flex; flex-direction:column; }
+        .left video { flex:1; background:#000; border-radius:8px; margin-top:10px; }
+
+        .start-btn, .stop-btn {
+          padding:10px 20px; border-radius:4px; font-weight:bold;
+          cursor:pointer; margin-bottom:10px; align-self:flex-start;
+        }
+        .start-btn {
+          background:#fe2c55; color:#fff; border:2px solid #000;
+        }
+        .start-btn:hover { background:#ff6699; }
+        .stop-btn {
+          background:#000; color:#fe2c55; border:2px solid #fe2c55;
+        }
+        .stop-btn:hover { background:#333; }
+
+        .right {
+          width:320px; background:#f8f8f8; border-left:1px solid #eee;
+          padding:20px; display:flex; flex-direction:column; color:#000;
+        }
+        .login-box, .chat-feed { color:#000; }
+        /* …existing login-box & chat-feed styling… */
+      </style>
+    </head>
+    <body>
+      {%% include 'sidebar' %%}
+      <div class="wrapper">
+        <div class="left">
+          <button id="liveToggleBtn" class="start-btn" data-live="false">
+            Start Livestream
+          </button>
+          <video id="liveVideo" autoplay muted></video>
+        </div>
+        <div class="right">
+          <div class="login-box">
+            <h3>Log in for full experience</h3>
+            <p>Follow creators, like videos & view comments.</p>
+            <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
+          </div>
+          <div class="chat-header">LIVE chat</div>
+          <div class="chat-feed">
+            <div class="chat-item"><strong>User1:</strong> Love this!</div>
+            <div class="chat-item"><strong>User2:</strong> 🔥🔥🔥</div>
+          </div>
+          <div class="footer">© 2025 Desibeatz</div>
+        </div>
+      </div>
+      <script>
+        (function(){
+          const btn = document.getElementById('liveToggleBtn'),
+                vid = document.getElementById('liveVideo');
+          let stream;
+          btn.addEventListener('click', async ()=>{
+            const live = btn.dataset.live === 'true';
+            if (!live) {
+              stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+              vid.srcObject = stream;
+              btn.textContent   = 'Stop Livestream';
+              btn.className     = 'stop-btn';
+              btn.dataset.live  = 'true';
+            } else {
+              stream.getTracks().forEach(t=>t.stop());
+              vid.srcObject = null;
+              const now = new Date().toISOString().slice(0,16).replace('T',' ');
+              await fetch('{{ url_for("livestream") }}', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({title:`Livestream at ${now}`})
+              });
+              btn.textContent   = 'Start Livestream';
+              btn.className     = 'start-btn';
+              btn.dataset.live  = 'false';
+            }
+          });
+        })();
+      </script>
+    </body>
+    </html>
+    """
+
+    # inject the sidebar HTML
     livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+
+    # **this** must be the last line of the view
     return render_template_string(livestream_html)
+
 
 # ----- LIKE & BOOKMARK -----
 @app.route('/like/<int:video_id>')
