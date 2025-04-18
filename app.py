@@ -431,32 +431,67 @@ def upload():
 from flask import jsonify
 
 # ----- LIVESTREAM (Start/Stop toggle + save on stop) -----
-from flask import abort
+
+# simple chat store
+chat_messages = []
+
+@app.route('/chat', methods=['GET','POST'])
+def chat():
+    if request.method == 'POST':
+        data = request.get_json() or {}
+        user = current_user.username if current_user.is_authenticated else 'Anonymous'
+        chat_messages.append({'user': user, 'text': data.get('text','')})
+        return ('', 204)
+    return jsonify(chat_messages)
+
+from flask import abort, jsonify
 
 @app.route('/livestream', methods=['GET','POST'])
 def livestream():
-    # ── STOP event: save livestream to DB ──
+    # ── STOP: save to DB ──
     if request.method == 'POST':
         if not current_user.is_authenticated:
             abort(401)
-        data     = request.get_json(silent=True) or request.form
+        data     = request.get_json(silent=True) or {}
         title    = data.get('title', 'Untitled Livestream')
         filename = "livestream_" + secure_filename(title) + ".mp4"
-        vid = Video(
-            title=title,
-            filename=filename,
-            user_id=current_user.id,
-            is_livestream=True
-        )
+        vid = Video(title=title,
+                    filename=filename,
+                    user_id=current_user.id,
+                    is_livestream=True)
         db.session.add(vid)
         db.session.commit()
         return ('', 204)
 
-    # ── GET event: render the page ──
+    # ── GET: render page ──
     livestream_html = """
     <!DOCTYPE html>
     <html lang="en">
-    <head>…same <style> as before…</head>
+    <head>
+      <meta charset="UTF-8">
+      <title>LIVE · Desibeatz</title>
+      <style>
+        /* …keep your existing styles… */
+        .wrapper { display:flex; margin-left:220px; height:100vh; }
+        .left    { flex:2; padding:20px; display:flex; flex-direction:column; }
+        .left video { flex:1; background:#000; border-radius:8px; margin-top:10px; }
+        .start-btn, .stop-btn {
+          padding:10px 20px; border-radius:4px; font-weight:bold;
+          cursor:pointer; margin-bottom:10px; align-self:flex-start;
+        }
+        .start-btn { background:#fe2c55; color:#fff; border:2px solid #000; }
+        .stop-btn  { background:#000;  color:#fe2c55; border:2px solid #fe2c55; }
+        .right { width:320px; background:#f8f8f8; border-left:1px solid #eee;
+                 padding:20px; display:flex; flex-direction:column; color:#000; }
+        .desc-box { margin-bottom:20px; }
+        .desc-box textarea { width:100%; height:60px; }
+        .chat-box { flex:1; display:flex; flex-direction:column; }
+        .chat-feed { flex:1; overflow-y:auto; border:1px solid #ccc; padding:10px; }
+        .chat-input { display:flex; margin-top:10px; }
+        .chat-input input { flex:1; padding:8px; }
+        .chat-input button { margin-left:8px; }
+      </style>
+    </head>
     <body>
       {%% include 'sidebar' %%}
       <div class="wrapper">
@@ -469,9 +504,7 @@ def livestream():
         <div class="right">
           <div class="desc-box">
             {% if current_user.is_authenticated %}
-              <textarea id="descTextarea" readonly>
-                {{ current_user.username }} is Live!
-              </textarea>
+              <textarea id="descTextarea" readonly>{{ current_user.username }} is Live!</textarea>
               <button id="editDescBtn">Edit</button>
               <button id="saveDescBtn" style="display:none;">Save</button>
             {% else %}
@@ -516,12 +549,14 @@ def livestream():
           }
         });
 
-        // chat logic
+        // chat load/send
         async function loadChat(){
           const res = await fetch('{{ url_for("chat") }}'),
-                msgs = await res.json(),
-                feed = document.getElementById('chatMessages');
-          feed.innerHTML = msgs.map(m=>`<div><strong>${m.user}:</strong> ${m.text}</div>`).join('');
+                msgs= await res.json(),
+                feed= document.getElementById('chatMessages');
+          feed.innerHTML = msgs.map(m=>
+            `<div><strong>${m.user}:</strong> ${m.text}</div>`
+          ).join('');
           feed.scrollTop = feed.scrollHeight;
         }
         document.getElementById('sendChatBtn').onclick = async ()=>{
@@ -543,10 +578,6 @@ def livestream():
     </html>
     """
     return render_template_string(livestream_html)
-      livestream_html,
-      video_title = f"{current_user.username} is Live!"
-    )
-
 
 
 # ----- LIKE & BOOKMARK -----
