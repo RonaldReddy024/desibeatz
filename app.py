@@ -433,16 +433,15 @@ from flask import jsonify
 # ----- LIVESTREAM (Start/Stop toggle + save on stop) -----
 from flask import abort
 
-@app.route('/livestream', methods=['GET', 'POST'])
+@app.route('/livestream', methods=['GET','POST'])
 def livestream():
-    # ── STOP ── (only logged‑in users can save)
+    # ── STOP event: save livestream to DB ──
     if request.method == 'POST':
         if not current_user.is_authenticated:
             abort(401)
-        data = request.get_json(silent=True) or request.form
-        title = data.get('title', 'Untitled Livestream')
+        data     = request.get_json(silent=True) or request.form
+        title    = data.get('title', 'Untitled Livestream')
         filename = "livestream_" + secure_filename(title) + ".mp4"
-
         vid = Video(
             title=title,
             filename=filename,
@@ -451,40 +450,13 @@ def livestream():
         )
         db.session.add(vid)
         db.session.commit()
-        # return 204 so JS stays on this page
         return ('', 204)
 
-    # ── GET ── render the page
+    # ── GET event: render the page ──
     livestream_html = """
     <!DOCTYPE html>
     <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>LIVE · Desibeatz</title>
-      <style>
-        body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; }
-        .wrapper { display:flex; margin-left:220px; height:100vh; }
-        .left { flex:2; padding:20px; display:flex; flex-direction:column; }
-        .left video { flex:1; background:#000; border-radius:8px; margin-top:10px; }
-        .start-btn, .stop-btn {
-          padding:10px 20px; border-radius:4px; font-weight:bold;
-          cursor:pointer; margin-bottom:10px; align-self:flex-start;
-        }
-        .start-btn {
-          background:#fe2c55; color:#fff; border:2px solid #000;
-        }
-        .start-btn:hover { background:#ff6699; }
-        .stop-btn {
-          background:#000; color:#fe2c55; border:2px solid #fe2c55;
-        }
-        .stop-btn:hover { background:#333; }
-        .right {
-          width:320px; background:#f8f8f8; border-left:1px solid #eee;
-          padding:20px; display:flex; flex-direction:column; color:#000;
-        }
-        .login-box, .chat-feed { color:#000; }
-      </style>
-    </head>
+    <head>…same <style> as before…</head>
     <body>
       {%% include 'sidebar' %%}
       <div class="wrapper">
@@ -495,61 +467,82 @@ def livestream():
           <video id="liveVideo" autoplay muted></video>
         </div>
         <div class="right">
-          {% if not current_user.is_authenticated %}
-            <div class="login-box">
-              <h3>Log in for full experience</h3>
-              <p>Follow creators, like videos & view comments.</p>
+          <div class="desc-box">
+            {% if current_user.is_authenticated %}
+              <textarea id="descTextarea" readonly>
+                {{ current_user.username }} is Live!
+              </textarea>
+              <button id="editDescBtn">Edit</button>
+              <button id="saveDescBtn" style="display:none;">Save</button>
+            {% else %}
+              <p><em>Log in to add a description.</em></p>
               <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
-            </div>
-          {% else %}
-            <div class="video-desc">
-              <h3>{{ video_title }}</h3>
-              <p>Your livestream description goes here.</p>
-            </div>
-          {% endif %}
-          <div class="chat-header">LIVE chat</div>
-          <div class="chat-feed">
-            <div class="chat-item"><strong>User1:</strong> Love this!</div>
-            <div class="chat-item"><strong>User2:</strong> 🔥🔥🔥</div>
+            {% endif %}
           </div>
-          <div class="footer">© 2025 Desibeatz</div>
+          <div class="chat-box">
+            <div class="chat-feed" id="chatMessages"></div>
+            <div class="chat-input">
+              <input id="chatInput" type="text" placeholder="Type a message…">
+              <button id="sendChatBtn">Send</button>
+            </div>
+          </div>
         </div>
       </div>
       <script>
-        (() => {
-          const btn = document.getElementById('liveToggleBtn'),
-                vid = document.getElementById('liveVideo');
-          let stream;
-          btn.addEventListener('click', async () => {
-            const live = btn.dataset.live === 'true';
-            if (!live) {
-              stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-              vid.srcObject = stream;
-              btn.textContent   = 'Stop Livestream';
-              btn.className     = 'stop-btn';
-              btn.dataset.live  = 'true';
-            } else {
-              stream.getTracks().forEach(t => t.stop());
-              vid.srcObject = null;
-              const now = new Date().toISOString().slice(0,16).replace('T',' ');
-              await fetch('{{ url_for("livestream") }}', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({title:`Livestream at ${now}`})
-              });
-              btn.textContent   = 'Start Livestream';
-              btn.className     = 'start-btn';
-              btn.dataset.live  = 'false';
-            }
+      (()=>{
+        const btn = document.getElementById('liveToggleBtn'),
+              vid = document.getElementById('liveVideo');
+        let stream;
+        btn.addEventListener('click', async ()=>{
+          const live = btn.dataset.live==='true';
+          if (!live) {
+            stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+            vid.srcObject = stream;
+            btn.textContent='Stop Livestream';
+            btn.className='stop-btn';
+            btn.dataset.live='true';
+          } else {
+            stream.getTracks().forEach(t=>t.stop());
+            vid.srcObject=null;
+            const now = new Date().toISOString().slice(0,16).replace('T',' ');
+            await fetch('{{ url_for("livestream") }}',{
+              method:'POST',
+              headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({title:`Livestream at ${now}`})
+            });
+            btn.textContent='Start Livestream';
+            btn.className='start-btn';
+            btn.dataset.live='false';
+          }
+        });
+
+        // chat logic
+        async function loadChat(){
+          const res = await fetch('{{ url_for("chat") }}'),
+                msgs = await res.json(),
+                feed = document.getElementById('chatMessages');
+          feed.innerHTML = msgs.map(m=>`<div><strong>${m.user}:</strong> ${m.text}</div>`).join('');
+          feed.scrollTop = feed.scrollHeight;
+        }
+        document.getElementById('sendChatBtn').onclick = async ()=>{
+          const txt = document.getElementById('chatInput').value.trim();
+          if (!txt) return;
+          await fetch('{{ url_for("chat") }}',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({text:txt})
           });
-        })();
+          document.getElementById('chatInput').value='';
+          loadChat();
+        };
+        setInterval(loadChat,2000);
+        loadChat();
+      })();
       </script>
     </body>
     </html>
     """
-
-    livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(
+    return render_template_string(livestream_html)
       livestream_html,
       video_title = f"{current_user.username} is Live!"
     )
@@ -1002,6 +995,19 @@ def logout_route():
     logout_user()
     flash("Logged out successfully!", "info")
     return redirect(url_for('home'))
+
+# in-memory chat store
+chat_messages = []
+
+@app.route('/chat', methods=['GET','POST'])
+def chat():
+    if request.method == 'POST':
+        data = request.get_json()
+        user = current_user.username if current_user.is_authenticated else 'Anonymous'
+        chat_messages.append({'user':user, 'text': data.get('text','')})
+        return ('', 204)
+    return jsonify(chat_messages)
+
 
 if __name__ == '__main__':
     app.run(debug=True)
