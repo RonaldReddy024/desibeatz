@@ -451,102 +451,168 @@ def upload():
 @login_required
 def livestream():
     if request.method == 'POST':
-        title = request.form.get('title') or "Untitled"
-        dummy = "livestream_" + secure_filename(title) + ".mp4"
-        db.session.add(Video(title=title, filename=dummy, user_id=current_user.id, is_livestream=True))
+        # Accept JSON or form-data
+        data = request.get_json(silent=True) or request.form
+        title = data.get('title', 'Untitled Livestream')
+        filename = "livestream_" + secure_filename(title) + ".mp4"
+
+        # Save livestream record
+        vid = Video(title=title,
+                    filename=filename,
+                    user_id=current_user.id,
+                    is_livestream=True)
+        db.session.add(vid)
         db.session.commit()
-        flash("Livestream simulated!", "success")
-        return redirect(url_for('profile'))
 
-    livestream_html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <title>LIVE · Desibeatz</title>
-      <style>
-        body {
-          margin: 0; padding: 0;
-          font-family: 'Proxima Nova', Arial, sans-serif;
-          background: #fff;
-          /* sidebar_template will re-apply body { color: #fff }, so we override the boxes below */
-        }
-        .sidebar { /* same sidebar CSS */ }
+        # If this was an AJAX POST, just 204
+        return ('', 204)
 
-        .wrapper {
-          display: flex;
-          margin-left: 220px;
-          height: 100vh;
-        }
-        .left {
-          flex: 2;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-        }
-        .left video {
-          flex: 1;
-          background: #000;
-          border-radius: 8px;
-          margin-top: 10px;
-        }
+    # GET → render the page
+    livestream_html = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LIVE - Desibeatz</title>
+  <style>
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Proxima Nova', Arial, sans-serif;
+      background: #fff;
+    }
+    .sidebar { /* your sidebar CSS here */ }
 
-        .right {
-          width: 320px;
-          background: #f8f8f8;
-          border-left: 1px solid #eee;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-        }
+    .wrapper {
+      display: flex;
+      margin-left: 220px;
+      height: 100vh;
+    }
+    .left {
+      flex: 2;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    .left video {
+      flex: 1;
+      background: #000;
+      border-radius: 8px;
+      margin-top: 10px;
+    }
+    .start-btn {
+      background: #fe2c55;
+      color: #fff;
+      border: 2px solid #000;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 10px;
+      align-self: start;
+    }
+    .start-btn:hover { background: #ff6699; }
 
-        /* ─── force black text inside these two boxes ─── */
-        .login-box,
-        .chat-feed {
-          color: #000;
-        }
+    .stop-btn {
+      background: #000;
+      color: #fe2c55;
+      border: 2px solid #fe2c55;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 10px;
+      align-self: start;
+    }
+    .stop-btn:hover { background: #333; }
 
-        .login-box {
-          background: #fff;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          padding: 20px;
-          text-align: center;
-          margin-bottom: 20px;
+    .right {
+      width: 320px;
+      background: #f8f8f8;
+      border-left: 1px solid #eee;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      color: #000;
+    }
+    .login-box {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .chat-header { font-weight: bold; margin-bottom: 10px; }
+    .chat-feed {
+      flex: 1;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .chat-item { margin-bottom: 12px; font-size: 0.9em; }
+    .footer { text-align: center; color: #999; font-size: 0.8em; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  {%% include 'sidebar' %%}
+  <div class="wrapper">
+    <div class="left">
+      <button id="liveToggleBtn" class="start-btn" data-live="false">Start Livestream</button>
+      <video id="liveVideo" autoplay muted></video>
+    </div>
+    <div class="right">
+      <div class="login-box">
+        <h3>Log in for full experience</h3>
+        <p>Follow creators, like videos & view comments.</p>
+        <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
+      </div>
+      <div class="chat-header">LIVE chat</div>
+      <div class="chat-feed">
+        <div class="chat-item"><strong>User1:</strong> Love this!</div>
+        <div class="chat-item"><strong>User2:</strong> 🔥🔥🔥</div>
+      </div>
+      <div class="footer">© 2025 Desibeatz</div>
+    </div>
+  </div>
+  <script>
+    (()=>{
+      const btn = document.getElementById('liveToggleBtn'),
+            vid = document.getElementById('liveVideo');
+      let stream;
+      btn.addEventListener('click', async () => {
+        const live = btn.dataset.live === 'true';
+        if (!live) {
+          // START
+          stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+          vid.srcObject = stream;
+          btn.textContent  = 'Stop Livestream';
+          btn.className   = 'stop-btn';
+          btn.dataset.live = 'true';
+        } else {
+          // STOP
+          stream.getTracks().forEach(t=>t.stop());
+          vid.srcObject = null;
+          const now = new Date().toISOString().slice(0,16).replace('T',' ');
+          await fetch('{{ url_for("livestream") }}', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({title:`Livestream at ${now}`})
+          });
+          btn.textContent  = 'Start Livestream';
+          btn.className   = 'start-btn';
+          btn.dataset.live = 'false';
         }
-        .login-box button {
-          background: #fe2c55;
-          color: #fff;
-          border: none;
-          padding: 8px 20px;
-          border-radius: 4px;
-          font-weight: bold;
-          cursor: pointer;
-        }
+      });
+    })();
+  </script>
+</body>
+</html>'''
 
-        .chat-header {
-          font-weight: bold;
-          margin-bottom: 10px;
-        }
-        .chat-feed {
-          flex: 1;
-          overflow-y: auto;
-          background: #fff;
-          border: 1px solid #ddd;
-          border-radius: 6px;
-          padding: 10px;
-        }
-        .chat-item {
-          margin-bottom: 12px;
-          font-size: 0.9em;
-        }
+    # inject sidebar
+    livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
+    return render_template_string(livestream_html)
 
-        .footer {
-          text-align: center;
-          color: #999;
-          font-size: 0.8em;
-          margin-top: 20px;
-        }
 
         /* ─── new “Start Livestream” button ─── */
         <button id="liveToggleBtn" class="start-btn" data-live="false">Start Livestream</button>
