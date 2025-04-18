@@ -549,55 +549,56 @@ def livestream():
         }
 
         /* ─── new “Start Livestream” button ─── */
-        .start-btn {
-          background: #fe2c55;       /* pink */
-          color: #fff;               /* white text */
-          border: 2px solid #000;    /* black border */
-          padding: 10px 20px;
-          border-radius: 4px;
-          font-weight: bold;
-          cursor: pointer;
-          margin-top: 10px;
-        }
-        .start-btn:hover {
-          background: #ff6699;
-        }
-      </style>
-    </head>
-    <body>
-      {%% include 'sidebar' %%}
-      <div class="wrapper">
-        <div class="left">
-          <h2>Live</h2>
-          <!-- Start button to trigger getUserMedia -->
-          <button id="startBtn" class="start-btn">Start Livestream</button>
-          <video id="liveVideo" autoplay muted></video>
-        </div>
-        <div class="right">
-          <div class="login-box">
-            <h3>Log in for full experience</h3>
-            <p>Follow creators, like videos & view comments.</p>
-            <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
-          </div>
-          <div class="chat-header">LIVE chat</div>
-          <div class="chat-feed">
-            <div class="chat-item"><strong>User1:</strong> Love this!</div>
-            <div class="chat-item"><strong>User2:</strong> 🔥🔥🔥</div>
-          </div>
-          <div class="footer">© 2025 Desibeatz</div>
-        </div>
-      </div>
-      <script>
-        document.getElementById('startBtn').addEventListener('click', async () => {
-          const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-          document.getElementById('liveVideo').srcObject = stream;
-        });
-      </script>
-    </body>
-    </html>
-    """
-    livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(livestream_html)
+        <button id="liveToggleBtn" class="start-btn" data-live="false">Start Livestream</button>
+<video id="liveVideo" autoplay muted></video>
+
+<script>
+  const btn = document.getElementById('liveToggleBtn');
+  const videoEl = document.getElementById('liveVideo');
+  let stream;
+
+  btn.addEventListener('click', async () => {
+    const isLive = btn.dataset.live === 'true';
+
+    if (!isLive) {
+      // ─── START ───
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      videoEl.srcObject = stream;
+      btn.textContent = 'Stop Livestream';
+      btn.classList.replace('start-btn','stop-btn');
+      btn.dataset.live = 'true';
+
+    } else {
+      // ─── STOP ───
+      // 1) stop camera
+      stream.getTracks().forEach(t => t.stop());
+      videoEl.srcObject = null;
+
+      // 2) notify server to create a livestream record
+      const title = 'Livestream at ' +
+        new Date().toISOString().slice(0,16).replace('T',' ');
+      await fetch('{{ url_for("livestream") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+      });
+
+      // 3) flip back UI
+      btn.textContent = 'Start Livestream';
+      btn.classList.replace('stop-btn','start-btn');
+      btn.dataset.live = 'false';
+    }
+  });
+</script>
+.stop-btn {
+  background: #000;      /* black background */
+  color: #fe2c55;        /* pink text */
+  border: 2px solid #fe2c55;
+}
+.stop-btn:hover {
+  background: #333;
+}
+
 
 # ----- LIKE & BOOKMARK -----
 @app.route('/like/<int:video_id>')
