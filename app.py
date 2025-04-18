@@ -246,7 +246,7 @@ def explore():
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Explore · Desibeatz</title>
+  <title>Explore - Desibeatz</title>
   <style>
     body { margin:0; padding:0; background:#000; color:#fff; }
     .sidebar { /* your sidebar CSS */ }
@@ -287,7 +287,7 @@ def explore():
             {% if vid.is_livestream %}
               <span class="live-badge">● LIVE</span>
             {% endif %}
-            <strong>{{ vid.title }}</strong> · {{ vid.uploader.username }}
+            <strong>{{ vid.title }}</strong> - {{ vid.uploader.username }}
             <br>{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
           </div>
         </div>
@@ -458,7 +458,7 @@ def livestream():
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>LIVE · Desibeatz</title>
+  <title>LIVE - Desibeatz</title>
   <style>
     body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; }
     .sidebar { /* your sidebar CSS */ }
@@ -601,7 +601,7 @@ def profile():
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>{{ current_user.username }} · Profile</title>
+      <title>{{ current_user.username }} - Profile</title>
       <style>
         body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; color:#000; }
         .sidebar { /* same sidebar CSS */ }
