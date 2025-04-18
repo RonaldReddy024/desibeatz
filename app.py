@@ -220,27 +220,14 @@ def home():
         </div>
         <div class="video-feed">
           {% for vid in videos %}
-            <div class="video-card">
-              {# dynamic MIME type based on extension #}
-              {% set ext = vid.filename.rsplit('.', 1)[1].lower() %}
-              {% if ext == 'mp4' %}
-                {% set mime = 'video/mp4' %}
-              {% elif ext == 'mov' %}
-                {% set mime = 'video/quicktime' %}
-              {% elif ext == 'avi' %}
-                {% set mime = 'video/x-msvideo' %}
-              {% else %}
-                {% set mime = 'video/mp4' %}
-              {% endif %}
-              <video controls>
-                <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="{{ mime }}">
-                Your browser does not support the video tag.
-              </video>
-              <div class="video-info">
-                <strong>{{ vid.title }}</strong><br>
-                Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
-              </div>
-            </div>
+          <div class="video-card">
+  {# video preview removed #}
+  <div class="video-info">
+    <strong>{{ vid.title }}</strong><br>
+    Uploaded by: {{ vid.uploader.username }} on {{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
+  </div>
+</div>
+
           {% endfor %}
         </div>
       </div>
