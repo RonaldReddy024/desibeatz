@@ -432,10 +432,15 @@ from flask import jsonify
 
 # ----- LIVESTREAM (Start/Stop toggle + save on stop) -----
 from flask import jsonify
-
-@app.route('/livestream', methods=['GET', 'POST'])
-@login_required
-def livestream():
+- @app.route('/livestream', methods=['GET','POST'])
+- @login_required
++ @app.route('/livestream', methods=['GET','POST'])
+  def livestream():
+      # when we POST (stop the stream) we still require a logged‑in user:
+      if request.method == 'POST':
+-        # (you can keep login_required here if you like)
++        if not current_user.is_authenticated:
++            abort(401)
     # ── STOP event: save the stream to the DB ──
     if request.method == 'POST':
         data = request.get_json(silent=True) or request.form
@@ -499,18 +504,26 @@ def livestream():
           </button>
           <video id="liveVideo" autoplay muted></video>
         </div>
-        <div class="right">
-          <div class="login-box">
-            <h3>Log in for full experience</h3>
-            <p>Follow creators, like videos & view comments.</p>
-            <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
-          </div>
-          <div class="chat-header">LIVE chat</div>
-          <div class="chat-feed">
-            <div class="chat-item"><strong>User1:</strong> Love this!</div>
-            <div class="chat-item"><strong>User2:</strong> 🔥🔥🔥</div>
-          </div>
-          <div class="footer">© 2025 Desibeatz</div>
+       <div class="right">
+-        <div class="login-box">
+-          <h3>Log in for full experience</h3>
+-          <p>Follow creators, like videos & view comments.</p>
+-          <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
+-        </div>
++        {% if not current_user.is_authenticated %}
++          <div class="login-box">
++            <h3>Log in for full experience</h3>
++            <p>Follow creators, like videos & view comments.</p>
++            <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
++          </div>
++        {% else %}
++          <div class="video-desc">
++            <h3>{{ current_user.username }} is Live!</h3>
++            <p>{{ video_title or 'Your livestream description goes here.' }}</p>
++          </div>
++        {% endif %}
+         <div class="chat-header">LIVE chat</div>
+         <div class="chat-feed">      
         </div>
       </div>
       <script>
@@ -550,7 +563,10 @@ def livestream():
     livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
 
     # **this** must be the last line of the view
-    return render_template_string(livestream_html)
+  return render_template_string(
+        livestream_html,
+        video_title = "🟣 Live demo by " + (current_user.username if current_user.is_authenticated else ""),
+    )
 
 
 # ----- LIKE & BOOKMARK -----
