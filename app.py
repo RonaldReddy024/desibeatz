@@ -248,75 +248,62 @@ def explore():
       <meta charset="UTF-8">
       <title>Explore · Desibeatz</title>
       <style>
-        body { margin:0; padding:0; overflow:hidden; }
-        .sidebar { /* your sidebar CSS here */ }
-        .explore-container {
-          margin-left: 220px;
-          position: relative;
-          height: 100vh;
-          background: #000;
+        body { margin:0; padding:0; background:#000; color:#fff; }
+        .sidebar { /* …your sidebar CSS… */ }
+        .main-content { margin-left:220px; padding:20px; }
+        .video-feed {
+          display:grid;
+          grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+          gap:20px;
         }
-        .explore-container video {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+        .video-card video {
+          width:100%; border-radius:6px; background:#000;
         }
-        .controls {
-          position: absolute;
-          right: 20px;
-          top: 50%;
-          transform: translateY(-50%);
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
+        .video-info {
+          margin-top:8px; font-size:0.9em;
         }
-        .controls button {
-          width: 48px; height: 48px;
-          border: none; border-radius: 24px;
-          background: rgba(255,255,255,0.9);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 1.2em; cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        .live-badge {
+          color:#fe2c55;
+          font-weight:bold;
+          margin-right:6px;
         }
-        .scroll-arrow {
-          position: absolute;
-          right: 20px;
-          width: 48px; height: 48px;
-          background: rgba(255,255,255,0.9);
-          border-radius: 24px;
-          display: flex; align-items: center; justify-content: center;
-          cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-        .up { top: 10%; }
-        .down { bottom: 10%; }
       </style>
     </head>
     <body>
       {%% include 'sidebar' %%}
-      <div class="explore-container">
-        {% if videos %}
-          <video autoplay muted loop>
-            <source src="{{ url_for('uploaded_file', filename=videos[0].filename) }}" type="video/mp4">
-          </video>
-        {% else %}
-          <div style="color:#fff; text-align:center; padding-top:40vh;">No videos to explore.</div>
-        {% endif %}
-        <div class="controls">
-          <button title="Like">❤️</button>
-          <button title="Comment">💬</button>
-          <button title="Share">🔗</button>
-          <button title="Bookmark">🔖</button>
+      <div class="main-content">
+        <h2>Explore</h2>
+        <div class="video-feed">
+          {% for vid in videos %}
+            <div class="video-card">
+              {% set ext = vid.filename.rsplit('.',1)[1].lower() %}
+              {% set mime = {
+                   'mp4':'video/mp4',
+                   'mov':'video/quicktime',
+                   'avi':'video/x-msvideo'
+                 }.get(ext,'video/mp4') %}
+              <video controls>
+                <source src="{{ url_for('uploaded_file',filename=vid.filename) }}" type="{{ mime }}">
+              </video>
+              <div class="video-info">
+                {% if vid.is_livestream %}
+                  <span class="live-badge">● LIVE</span>
+                {% endif %}
+                <strong>{{ vid.title }}</strong> · {{ vid.uploader.username }}
+                <br>{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
+              </div>
+            </div>
+          {% else %}
+            <p>No videos to explore.</p>
+          {% endfor %}
         </div>
-        <div class="scroll-arrow up">⬆️</div>
-        <div class="scroll-arrow down">⬇️</div>
       </div>
     </body>
     </html>
     """
-    # this line injects your sidebar
     explore_html = explore_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(explore_html, videos=videos)
+
 
 # ----- FOLLOWING (Placeholder) Page -----
 @app.route('/following')
@@ -628,14 +615,35 @@ def profile():
           </div>
         </div>
         <div class="grid">
-          {% for vid in user_videos %}
-            <video controls>
-              <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
-            </video>
-          {% else %}
-            <p style="grid-column:1/-1; text-align:center; color:#888;">No videos yet.</p>
-          {% endfor %}
-        </div>
+        <style>
+  .video-thumb { position:relative; display:inline-block; margin:8px; }
+  .live-overlay {
+    position:absolute;
+    top:8px; left:8px;
+    background:rgba(255,0,0,0.8);
+    color:#fff;
+    padding:2px 6px;
+    border-radius:4px;
+    font-size:0.8em;
+  }
+</style>
+
+<div class="grid">
+  {% for vid in user_videos %}
+    <div class="video-thumb">
+      <video
+        src="{{ url_for('uploaded_file', filename=vid.filename) }}"
+        controls
+        style="width:160px; border-radius:6px;">
+      </video>
+      {% if vid.is_livestream %}
+        <div class="live-overlay">LIVE</div>
+      {% endif %}
+    </div>
+  {% else %}
+    <p style="grid-column:1/-1; text-align:center; color:#888;">No videos yet.</p>
+  {% endfor %}
+</div>
       </div>
     </body>
     </html>
