@@ -1,4 +1,3 @@
-
 import os
 from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, flash, send_from_directory, abort
@@ -242,62 +241,80 @@ def home():
 @app.route('/explore')
 def explore():
     videos = Video.query.order_by(Video.timestamp.desc()).all()
-    explore_html = '''<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Explore - Desibeatz</title>
-  <style>
-    body { margin:0; padding:0; background:#000; color:#fff; }
-    .sidebar { /* your sidebar CSS */ }
-    .main-content { margin-left:220px; padding:20px; }
-    .video-feed {
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
-      gap:20px;
-    }
-    .video-card video {
-      width:100%; border-radius:6px; background:#000;
-    }
-    .video-info {
-      margin-top:8px; font-size:0.9em;
-    }
-    .live-badge {
-      color:#fe2c55; font-weight:bold; margin-right:6px;
-    }
-  </style>
-</head>
-<body>
-  {%% include 'sidebar' %%}
-  <div class="main-content">
-    <h2>Explore</h2>
-    <div class="video-feed">
-      {% for vid in videos %}
-        <div class="video-card">
-          {% set ext = vid.filename.rsplit('.',1)[1].lower() %}
-          {% set mime = {
-               'mp4':'video/mp4',
-               'mov':'video/quicktime',
-               'avi':'video/x-msvideo'
-             }.get(ext,'video/mp4') %}
-          <video controls>
-            <source src="{{ url_for('uploaded_file',filename=vid.filename) }}" type="{{ mime }}">
+    explore_html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Explore · Desibeatz</title>
+      <style>
+        body { margin:0; padding:0; overflow:hidden; }
+        .sidebar { /* your sidebar CSS here */ }
+        .explore-container {
+          margin-left: 220px;
+          position: relative;
+          height: 100vh;
+          background: #000;
+        }
+        .explore-container video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .controls {
+          position: absolute;
+          right: 20px;
+          top: 50%;
+          transform: translateY(-50%);
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .controls button {
+          width: 48px; height: 48px;
+          border: none; border-radius: 24px;
+          background: rgba(255,255,255,0.9);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 1.2em; cursor: pointer;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .scroll-arrow {
+          position: absolute;
+          right: 20px;
+          width: 48px; height: 48px;
+          background: rgba(255,255,255,0.9);
+          border-radius: 24px;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .up { top: 10%; }
+        .down { bottom: 10%; }
+      </style>
+    </head>
+    <body>
+      {%% include 'sidebar' %%}
+      <div class="explore-container">
+        {% if videos %}
+          <video autoplay muted loop>
+            <source src="{{ url_for('uploaded_file', filename=videos[0].filename) }}" type="video/mp4">
           </video>
-          <div class="video-info">
-            {% if vid.is_livestream %}
-              <span class="live-badge">● LIVE</span>
-            {% endif %}
-            <strong>{{ vid.title }}</strong> - {{ vid.uploader.username }}
-            <br>{{ vid.timestamp.strftime('%Y-%m-%d %H:%M') }}
-          </div>
+        {% else %}
+          <div style="color:#fff; text-align:center; padding-top:40vh;">No videos to explore.</div>
+        {% endif %}
+        <div class="controls">
+          <button title="Like">❤️</button>
+          <button title="Comment">💬</button>
+          <button title="Share">🔗</button>
+          <button title="Bookmark">🔖</button>
         </div>
-      {% else %}
-        <p>No videos to explore.</p>
-      {% endfor %}
-    </div>
-  </div>
-</body>
-</html>'''
+        <div class="scroll-arrow up">⬆️</div>
+        <div class="scroll-arrow down">⬇️</div>
+      </div>
+    </body>
+    </html>
+    """
+    # this line injects your sidebar
     explore_html = explore_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(explore_html, videos=videos)
 
@@ -428,42 +445,18 @@ def upload():
     upload_html = upload_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(upload_html)
 
-from flask import jsonify
-
-# ----- LIVESTREAM (Start/Stop toggle + save on stop) -----
-
-from flask import abort, jsonify
-
-# in-memory chat store
-chat_messages = []
-
-@app.route('/live_chat', methods=['GET', 'POST'])
-def live_chat():
-    if request.method == 'POST':
-        data = request.get_json() or {}
-        user = current_user.username if current_user.is_authenticated else 'Anonymous'
-        chat_messages.append({'user': user, 'text': data.get('text', '')})
-        return ('', 204)
-    return jsonify(chat_messages)
-
-@app.route('/livestream', methods=['GET', 'POST'])
+# ----- LIVESTREAM (Exact TikTok-style copy) -----
+@app.route('/livestream', methods=['GET','POST'])
+@login_required
 def livestream():
-    # ── STOP: save livestream record (only for logged‑in users) ──
     if request.method == 'POST':
-        if not current_user.is_authenticated:
-            abort(401)
-        data = request.get_json(silent=True) or {}
-        title = data.get('title', 'Untitled Livestream')
-        filename = "livestream_" + secure_filename(title) + ".mp4"
-        vid = Video(title=title,
-                    filename=filename,
-                    user_id=current_user.id,
-                    is_livestream=True)
-        db.session.add(vid)
+        title = request.form.get('title') or "Untitled"
+        dummy = "livestream_" + secure_filename(title) + ".mp4"
+        db.session.add(Video(title=title, filename=dummy, user_id=current_user.id, is_livestream=True))
         db.session.commit()
-        return ('', 204)
+        flash("Livestream simulated!", "success")
+        return redirect(url_for('profile'))
 
-    # ── GET: render the livestream page ──
     livestream_html = """
     <!DOCTYPE html>
     <html lang="en">
@@ -471,114 +464,139 @@ def livestream():
       <meta charset="UTF-8">
       <title>LIVE · Desibeatz</title>
       <style>
-        .wrapper { display:flex; margin-left:220px; height:100vh; }
-        .left    { flex:2; padding:20px; display:flex; flex-direction:column; }
-        .left video { flex:1; background:#000; border-radius:8px; margin-top:10px; }
-        .start-btn, .stop-btn {
-          padding:10px 20px; border-radius:4px; font-weight:bold;
-          cursor:pointer; margin-bottom:10px; align-self:flex-start;
+        body {
+          margin: 0; padding: 0;
+          font-family: 'Proxima Nova', Arial, sans-serif;
+          background: #fff;
+          /* sidebar_template will re-apply body { color: #fff }, so we override the boxes below */
         }
-        .start-btn { background:#fe2c55; color:#fff; border:2px solid #000; }
-        .stop-btn  { background:#000;  color:#fe2c55; border:2px solid #fe2c55; }
-        .right { width:320px; background:#f8f8f8; border-left:1px solid #eee;
-                 padding:20px; display:flex; flex-direction:column; color:#000; }
-        .desc-box { margin-bottom:20px; }
-        .desc-box textarea { width:100%; height:60px; }
-        .chat-box { flex:1; display:flex; flex-direction:column; }
-        .chat-feed { flex:1; overflow-y:auto; border:1px solid #ccc; padding:10px; }
-        .chat-input { display:flex; margin-top:10px; }
-        .chat-input input { flex:1; padding:8px; }
-        .chat-input button { margin-left:8px; }
+        .sidebar { /* same sidebar CSS */ }
+
+        .wrapper {
+          display: flex;
+          margin-left: 220px;
+          height: 100vh;
+        }
+        .left {
+          flex: 2;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+        }
+        .left video {
+          flex: 1;
+          background: #000;
+          border-radius: 8px;
+          margin-top: 10px;
+        }
+
+        .right {
+          width: 320px;
+          background: #f8f8f8;
+          border-left: 1px solid #eee;
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* ─── force black text inside these two boxes ─── */
+        .login-box,
+        .chat-feed {
+          color: #000;
+        }
+
+        .login-box {
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 20px;
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .login-box button {
+          background: #fe2c55;
+          color: #fff;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
+        }
+
+        .chat-header {
+          font-weight: bold;
+          margin-bottom: 10px;
+        }
+        .chat-feed {
+          flex: 1;
+          overflow-y: auto;
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          padding: 10px;
+        }
+        .chat-item {
+          margin-bottom: 12px;
+          font-size: 0.9em;
+        }
+
+        .footer {
+          text-align: center;
+          color: #999;
+          font-size: 0.8em;
+          margin-top: 20px;
+        }
+
+        /* ─── new “Start Livestream” button ─── */
+        .start-btn {
+          background: #fe2c55;       /* pink */
+          color: #fff;               /* white text */
+          border: 2px solid #000;    /* black border */
+          padding: 10px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
+          margin-top: 10px;
+        }
+        .start-btn:hover {
+          background: #ff6699;
+        }
       </style>
     </head>
     <body>
       {%% include 'sidebar' %%}
       <div class="wrapper">
         <div class="left">
-          <button id="liveToggleBtn" class="start-btn" data-live="false">
-            Start Livestream
-          </button>
+          <h2>Live</h2>
+          <!-- Start button to trigger getUserMedia -->
+          <button id="startBtn" class="start-btn">Start Livestream</button>
           <video id="liveVideo" autoplay muted></video>
         </div>
         <div class="right">
-          <div class="desc-box">
-            {% if current_user.is_authenticated %}
-              <textarea id="descTextarea" readonly>{{ video_title }}</textarea>
-              <button id="editDescBtn">Edit</button>
-              <button id="saveDescBtn" style="display:none;">Save</button>
-            {% else %}
-              <p><em>Log in to add a description.</em></p>
-              <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
-            {% endif %}
+          <div class="login-box">
+            <h3>Log in for full experience</h3>
+            <p>Follow creators, like videos & view comments.</p>
+            <button onclick="location.href='{{ url_for('login_route') }}'">Log in</button>
           </div>
-          <div class="chat-box">
-            <div class="chat-feed" id="chatMessages"></div>
-            <div class="chat-input">
-              <input id="chatInput" type="text" placeholder="Type a message…">
-              <button id="sendChatBtn">Send</button>
-            </div>
+          <div class="chat-header">LIVE chat</div>
+          <div class="chat-feed">
+            <div class="chat-item"><strong>User1:</strong> Love this!</div>
+            <div class="chat-item"><strong>User2:</strong> 🔥🔥🔥</div>
           </div>
+          <div class="footer">© 2025 Desibeatz</div>
         </div>
       </div>
       <script>
-      (function(){
-        const btn = document.getElementById('liveToggleBtn'),
-              vid = document.getElementById('liveVideo');
-        let stream;
-        btn.addEventListener('click', async () => {
-          const live = btn.dataset.live === 'true';
-          if (!live) {
-            stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
-            vid.srcObject = stream;
-            btn.textContent = 'Stop Livestream';
-            btn.className   = 'stop-btn';
-            btn.dataset.live= 'true';
-          } else {
-            stream.getTracks().forEach(t=>t.stop());
-            vid.srcObject = null;
-            const now = new Date().toISOString().slice(0,16).replace('T',' ');
-            await fetch('{{ url_for("livestream") }}', {
-              method: 'POST',
-              headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({title:`Livestream at ${now}`})
-            });
-            btn.textContent = 'Start Livestream';
-            btn.className   = 'start-btn';
-            btn.dataset.live= 'false';
-          }
+        document.getElementById('startBtn').addEventListener('click', async () => {
+          const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+          document.getElementById('liveVideo').srcObject = stream;
         });
-
-        // chat load/send
-        async function loadChat() {
-          const res = await fetch('{{ url_for("live_chat") }}'),
-                msgs= await res.json(),
-                feed= document.getElementById('chatMessages');
-          feed.innerHTML = msgs.map(m=>`<div><strong>${m.user}:</strong> ${m.text}</div>`).join('');
-          feed.scrollTop = feed.scrollHeight;
-        }
-        document.getElementById('sendChatBtn').onclick = async () => {
-          const txt = document.getElementById('chatInput').value.trim();
-          if (!txt) return;
-          await fetch('{{ url_for("live_chat") }}', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({text: txt})
-          });
-          document.getElementById('chatInput').value = '';
-          loadChat();
-        };
-        setInterval(loadChat, 2000);
-        loadChat();
-      })();
       </script>
     </body>
     </html>
     """
     livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
-    return render_template_string(livestream_html,
-                                  video_title=f"{current_user.username} is Live!")
-
-
+    return render_template_string(livestream_html)
 
 # ----- LIKE & BOOKMARK -----
 @app.route('/like/<int:video_id>')
@@ -607,14 +625,13 @@ def toggle_bookmark(video_id):
 @app.route('/profile')
 @login_required
 def profile():
-    # … your profile_html rendering 
     user_videos = Video.query.filter_by(user_id=current_user.id).order_by(Video.timestamp.desc()).all()
     profile_html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
-      <title>{{ current_user.username }} - Profile</title>
+      <title>{{ current_user.username }} · Profile</title>
       <style>
         body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; color:#000; }
         .sidebar { /* same sidebar CSS */ }
@@ -666,25 +683,12 @@ def profile():
         </div>
         <div class="grid">
           {% for vid in user_videos %}
-  <div class="video-thumb"
-       style="position:relative; display:inline-block; margin:8px;">
-    <video src="{{ url_for('uploaded_file',filename=vid.filename) }}"
-           controls
-           style="width:160px; border-radius:6px;">
-    </video>
-    {% if vid.is_livestream %}
-      <div style="
-        position:absolute; top:8px; left:8px;
-        background:rgba(255,0,0,0.8);
-        color:#fff; padding:2px 6px;
-        border-radius:4px; font-size:0.8em;">
-        LIVE
-      </div>
-    {% endif %}
-  </div>
-{% else %}
-  <p>No videos yet.</p>
-{% endfor %}
+            <video controls>
+              <source src="{{ url_for('uploaded_file', filename=vid.filename) }}" type="video/mp4">
+            </video>
+          {% else %}
+            <p style="grid-column:1/-1; text-align:center; color:#888;">No videos yet.</p>
+          {% endfor %}
         </div>
       </div>
     </body>
@@ -1026,19 +1030,6 @@ def logout_route():
     logout_user()
     flash("Logged out successfully!", "info")
     return redirect(url_for('home'))
-
-# in-memory chat store
-chat_messages = []
-
-@app.route('/chat', methods=['GET','POST'])
-def chat():
-    if request.method == 'POST':
-        data = request.get_json()
-        user = current_user.username if current_user.is_authenticated else 'Anonymous'
-        chat_messages.append({'user':user, 'text': data.get('text','')})
-        return ('', 204)
-    return jsonify(chat_messages)
-
 
 if __name__ == '__main__':
     app.run(debug=True)
