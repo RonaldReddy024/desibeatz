@@ -464,8 +464,14 @@ def livestream():
       <meta charset="UTF-8">
       <title>LIVE · Desibeatz</title>
       <style>
-        body { margin:0; padding:0; font-family:'Proxima Nova',Arial,sans-serif; background:#fff; }
+        body {
+          margin: 0; padding: 0;
+          font-family: 'Proxima Nova', Arial, sans-serif;
+          background: #fff;
+          /* sidebar_template will re-apply body { color: #fff }, so we override the boxes below */
+        }
         .sidebar { /* same sidebar CSS */ }
+
         .wrapper {
           display: flex;
           margin-left: 220px;
@@ -474,13 +480,16 @@ def livestream():
         .left {
           flex: 2;
           padding: 20px;
+          display: flex;
+          flex-direction: column;
         }
         .left video {
-          width: 100%;
-          height: calc(100% - 40px);
+          flex: 1;
           background: #000;
           border-radius: 8px;
+          margin-top: 10px;
         }
+
         .right {
           width: 320px;
           background: #f8f8f8;
@@ -489,6 +498,13 @@ def livestream():
           display: flex;
           flex-direction: column;
         }
+
+        /* ─── force black text inside these two boxes ─── */
+        .login-box,
+        .chat-feed {
+          color: #000;
+        }
+
         .login-box {
           background: #fff;
           border: 1px solid #ddd;
@@ -506,6 +522,7 @@ def livestream():
           font-weight: bold;
           cursor: pointer;
         }
+
         .chat-header {
           font-weight: bold;
           margin-bottom: 10px;
@@ -522,11 +539,27 @@ def livestream():
           margin-bottom: 12px;
           font-size: 0.9em;
         }
+
         .footer {
           text-align: center;
           color: #999;
           font-size: 0.8em;
           margin-top: 20px;
+        }
+
+        /* ─── new “Start Livestream” button ─── */
+        .start-btn {
+          background: #fe2c55;       /* pink */
+          color: #fff;               /* white text */
+          border: 2px solid #000;    /* black border */
+          padding: 10px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          cursor: pointer;
+          margin-top: 10px;
+        }
+        .start-btn:hover {
+          background: #ff6699;
         }
       </style>
     </head>
@@ -535,6 +568,8 @@ def livestream():
       <div class="wrapper">
         <div class="left">
           <h2>Live</h2>
+          <!-- Start button to trigger getUserMedia -->
+          <button id="startBtn" class="start-btn">Start Livestream</button>
           <video id="liveVideo" autoplay muted></video>
         </div>
         <div class="right">
@@ -552,7 +587,7 @@ def livestream():
         </div>
       </div>
       <script>
-        document.getElementById('startBtn')?.addEventListener('click', async () => {
+        document.getElementById('startBtn').addEventListener('click', async () => {
           const stream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
           document.getElementById('liveVideo').srcObject = stream;
         });
@@ -562,8 +597,6 @@ def livestream():
     """
     livestream_html = livestream_html.replace("{%% include 'sidebar' %%}", sidebar_template)
     return render_template_string(livestream_html)
-
-
 
 # ----- LIKE & BOOKMARK -----
 @app.route('/like/<int:video_id>')
